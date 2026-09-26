@@ -297,8 +297,10 @@ export default function TradingTerminalPage() {
               theme={theme}
               quote={quotes[selectedSymbol]}
               quotes={quotes}
+              positions={positions}
               onSelectSymbol={setSelectedSymbol}
               onQuickTrade={handleQuickTrade}
+              onRefreshAll={handleRefreshAll}
             />
           </div>
 

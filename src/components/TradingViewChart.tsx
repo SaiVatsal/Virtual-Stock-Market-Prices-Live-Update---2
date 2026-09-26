@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { SymbolId, PriceQuote } from '@/lib/types';
+import { SymbolId, PriceQuote, Position } from '@/lib/types';
+import ChartTradingOverlay from './ChartTradingOverlay';
 import {
   Maximize2,
   Minimize2,
@@ -19,8 +20,10 @@ interface TradingViewChartProps {
   theme?: 'dark' | 'light';
   quote?: PriceQuote;
   quotes?: Record<SymbolId, PriceQuote>;
+  positions?: Position[];
   onSelectSymbol?: (symbol: SymbolId) => void;
   onQuickTrade?: (side: 'BUY' | 'SELL', targetSymbol?: SymbolId) => void;
+  onRefreshAll?: () => void;
 }
 
 const TV_SYMBOL_MAP: Record<SymbolId, string> = {
@@ -34,8 +37,10 @@ export default function TradingViewChart({
   theme = 'dark',
   quote,
   quotes,
+  positions = [],
   onSelectSymbol,
-  onQuickTrade
+  onQuickTrade,
+  onRefreshAll
 }: TradingViewChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const container2Ref = useRef<HTMLDivElement>(null);
@@ -341,15 +346,44 @@ export default function TradingViewChart({
             {/* Left Chart (Primary Symbol) */}
             <div className="relative h-full w-full">
               <div ref={containerRef} className="h-full w-full" />
+              <ChartTradingOverlay
+                symbol={symbol}
+                quote={quote}
+                positions={positions}
+                theme={theme}
+                onOrderPlaced={onRefreshAll}
+                onPositionModified={onRefreshAll}
+                onPositionClosed={onRefreshAll}
+              />
             </div>
 
             {/* Right Chart (Secondary Symbol) */}
             <div className="relative h-full w-full">
               <div ref={container2Ref} className="h-full w-full" />
+              <ChartTradingOverlay
+                symbol={secondarySymbol}
+                quote={quotes?.[secondarySymbol]}
+                positions={positions}
+                theme={theme}
+                onOrderPlaced={onRefreshAll}
+                onPositionModified={onRefreshAll}
+                onPositionClosed={onRefreshAll}
+              />
             </div>
           </div>
         ) : (
-          <div ref={containerRef} className="h-full w-full" />
+          <div className="relative h-full w-full">
+            <div ref={containerRef} className="h-full w-full" />
+            <ChartTradingOverlay
+              symbol={symbol}
+              quote={quote}
+              positions={positions}
+              theme={theme}
+              onOrderPlaced={onRefreshAll}
+              onPositionModified={onRefreshAll}
+              onPositionClosed={onRefreshAll}
+            />
+          </div>
         )}
 
         {!scriptLoaded && (

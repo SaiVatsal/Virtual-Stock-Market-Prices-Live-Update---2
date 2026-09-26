@@ -2,7 +2,7 @@ export type SymbolId = 'XAUUSD' | 'EURUSD' | 'BTCUSD';
 
 export type OrderSide = 'BUY' | 'SELL';
 export type OrderType = 'MARKET' | 'LIMIT' | 'STOP';
-export type PositionStatus = 'OPEN' | 'CLOSED' | 'CANCELLED';
+export type PositionStatus = 'OPEN' | 'CLOSED' | 'CANCELLED' | 'PENDING';
 
 export interface PriceQuote {
   symbol: SymbolId;

@@ -7,7 +7,9 @@ import {
   getPositions,
   getTradeHistory,
   updateMarketPrices,
-  getLatestQuotes
+  getLatestQuotes,
+  modifyPosition,
+  cancelOrder
 } from '../src/lib/market-engine';
 
 describe('Market Engine & OMS', () => {
@@ -131,4 +133,85 @@ describe('Market Engine & OMS', () => {
     // (1.0830 - 1.0851) * 200,000 = -420.0
     expect(history[0].profit).toBeCloseTo(-420.0, 1);
   });
+
+  it('supports modifying Stop Loss, Take Profit and entry price dynamically', () => {
+    updateMarketPrices({
+      XAUUSD: {
+        symbol: 'XAUUSD',
+        bid: 2350.0,
+        ask: 2350.2,
+        spread: 0.2,
+        high24h: 2365.0,
+        low24h: 2335.0,
+        change24h: 0.65,
+        timestamp: Date.now()
+      }
+    });
+
+    const pos = executeOrder({
+      symbol: 'XAUUSD',
+      side: 'BUY',
+      type: 'MARKET',
+      lots: 1.0
+    });
+
+    expect(pos.stopLoss).toBeUndefined();
+    expect(pos.takeProfit).toBeUndefined();
+
+    // Dynamically drag/set Stop Loss to 2340 and Take Profit to 2375
+    const updated = modifyPosition(pos.id, {
+      stopLoss: 2340.0,
+      takeProfit: 2375.0
+    });
+
+    expect(updated.stopLoss).toBe(2340.0);
+    expect(updated.takeProfit).toBe(2375.0);
+  });
+
+  it('places a pending Buy Limit order and triggers when price dips to entry price', () => {
+    updateMarketPrices({
+      XAUUSD: {
+        symbol: 'XAUUSD',
+        bid: 2350.0,
+        ask: 2350.2,
+        spread: 0.2,
+        high24h: 2365.0,
+        low24h: 2335.0,
+        change24h: 0.65,
+        timestamp: Date.now()
+      }
+    });
+
+    // Place Buy Limit below current ask at 2340.0
+    const pending = executeOrder({
+      symbol: 'XAUUSD',
+      side: 'BUY',
+      type: 'LIMIT',
+      lots: 1.0,
+      price: 2340.0,
+      takeProfit: 2360.0
+    });
+
+    expect(pending.status).toBe('PENDING');
+    expect(pending.entryPrice).toBe(2340.0);
+
+    // Price dips to 2339.5 ask
+    updateMarketPrices({
+      XAUUSD: {
+        symbol: 'XAUUSD',
+        bid: 2339.3,
+        ask: 2339.5,
+        spread: 0.2,
+        high24h: 2365.0,
+        low24h: 2335.0,
+        change24h: -0.2,
+        timestamp: Date.now()
+      }
+    });
+
+    // Should now be triggered to OPEN
+    const active = getPositions().find((p) => p.id === pending.id);
+    expect(active?.status).toBe('OPEN');
+  });
 });
+

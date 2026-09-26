@@ -109,6 +109,29 @@ export function recalculatePortfolio(): void {
     }
 
     const spec = INSTRUMENT_SPECS[pos.symbol];
+
+    // Handle PENDING limit/stop orders
+    if (pos.status === 'PENDING') {
+      let triggered = false;
+      if (pos.type === 'LIMIT') {
+        if (pos.side === 'BUY' && quote.ask <= pos.entryPrice) triggered = true;
+        if (pos.side === 'SELL' && quote.bid >= pos.entryPrice) triggered = true;
+      } else if (pos.type === 'STOP') {
+        if (pos.side === 'BUY' && quote.ask >= pos.entryPrice) triggered = true;
+        if (pos.side === 'SELL' && quote.bid <= pos.entryPrice) triggered = true;
+      }
+
+      if (triggered) {
+        pos.status = 'OPEN';
+        pos.openTime = Date.now();
+        pos.currentPrice = pos.side === 'BUY' ? quote.bid : quote.ask;
+      } else {
+        pos.currentPrice = pos.side === 'BUY' ? quote.ask : quote.bid;
+        remainingPositions.push(pos);
+        continue;
+      }
+    }
+
     let isSlHit = false;
     let isTpHit = false;
     let closePrice = 0;
@@ -217,12 +240,13 @@ export function executeOrder(req: OrderRequest): Position {
 
   const spec = INSTRUMENT_SPECS[req.symbol];
   const units = Math.round(req.lots * spec.contractSize);
-  const entryPrice = req.side === 'BUY' ? quote.ask : quote.bid;
+  const isPending = (req.type === 'LIMIT' || req.type === 'STOP') && req.price !== undefined;
+  const entryPrice = isPending ? req.price! : (req.side === 'BUY' ? quote.ask : quote.bid);
 
   const leverage = store.account.leverage || 100;
   const marginRequired = Math.round(((req.lots * spec.contractSize * entryPrice) / leverage) * 100) / 100;
 
-  if (store.account.freeMargin < marginRequired) {
+  if (!isPending && store.account.freeMargin < marginRequired) {
     throw new Error(`Insufficient Free Margin. Required: $${marginRequired}, Available: $${store.account.freeMargin}`);
   }
 
@@ -240,7 +264,7 @@ export function executeOrder(req: OrderRequest): Position {
     profit: 0,
     profitPips: 0,
     margin: marginRequired,
-    status: 'OPEN',
+    status: isPending ? 'PENDING' : 'OPEN',
     openTime: Date.now(),
     smcContext: req.smcContext
   };
@@ -248,6 +272,60 @@ export function executeOrder(req: OrderRequest): Position {
   store.positions.unshift(newPosition);
   recalculatePortfolio();
   return newPosition;
+}
+
+/**
+ * Modifies Stop Loss, Take Profit, or Entry Price of a position or pending order
+ */
+export function modifyPosition(
+  positionId: string,
+  updates: {
+    stopLoss?: number | null;
+    takeProfit?: number | null;
+    entryPrice?: number;
+  }
+): Position {
+  const store = getStore();
+  const pos = store.positions.find((p) => p.id === positionId);
+  if (!pos) {
+    throw new Error(`Position or order ${positionId} not found`);
+  }
+
+  if (updates.stopLoss !== undefined) {
+    pos.stopLoss = updates.stopLoss === null ? undefined : updates.stopLoss;
+  }
+  if (updates.takeProfit !== undefined) {
+    pos.takeProfit = updates.takeProfit === null ? undefined : updates.takeProfit;
+  }
+  if (updates.entryPrice !== undefined) {
+    pos.entryPrice = updates.entryPrice;
+    if (pos.status === 'PENDING') {
+      pos.currentPrice = updates.entryPrice;
+    }
+  }
+
+  recalculatePortfolio();
+  return pos;
+}
+
+/**
+ * Cancels a pending order or closes an open position
+ */
+export function cancelOrder(orderId: string): Position {
+  const store = getStore();
+  const index = store.positions.findIndex((p) => p.id === orderId);
+  if (index === -1) {
+    throw new Error(`Order ${orderId} not found`);
+  }
+  const pos = store.positions[index];
+  if (pos.status === 'PENDING') {
+    pos.status = 'CANCELLED';
+    store.positions.splice(index, 1);
+    recalculatePortfolio();
+    return pos;
+  } else {
+    return closePosition(orderId);
+  }
 }
 
 /**
