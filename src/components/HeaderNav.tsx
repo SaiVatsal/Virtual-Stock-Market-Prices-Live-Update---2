@@ -13,7 +13,8 @@ import {
   ToggleLeft,
   ToggleRight,
   Sun,
-  Moon
+  Moon,
+  FileSpreadsheet
 } from 'lucide-react';
 
 interface HeaderNavProps {
@@ -23,6 +24,7 @@ interface HeaderNavProps {
   onSelectSymbol: (symbol: SymbolId) => void;
   onOpenSettings: () => void;
   onOpenPineScript: () => void;
+  onOpenStatement?: () => void;
   onTriggerTestSignal: () => void;
   isSimulatingSignal: boolean;
   marketSchedule?: MarketScheduleInfo;
@@ -44,6 +46,7 @@ export default function HeaderNav({
   onSelectSymbol,
   onOpenSettings,
   onOpenPineScript,
+  onOpenStatement,
   onTriggerTestSignal,
   isSimulatingSignal,
   marketSchedule,
@@ -218,6 +221,18 @@ export default function HeaderNav({
               <Code2 className="w-3.5 h-3.5 text-cyan-600 dark:text-cyan-400" />
               <span className="hidden sm:inline">Pine Script</span>
             </button>
+
+            {/* Official Statement Button (Feature 1!) */}
+            {onOpenStatement && (
+              <button
+                onClick={onOpenStatement}
+                title="View & Export Official Exness Account Statement"
+                className="flex items-center gap-1 px-2.5 py-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-500/30 rounded-lg text-xs font-semibold transition-all"
+              >
+                <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                <span className="hidden md:inline">Statement</span>
+              </button>
+            )}
 
             {/* Light / Dark Mode Toggle */}
             <button

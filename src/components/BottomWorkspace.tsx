@@ -1,9 +1,8 @@
-'use client';
-
 import React, { useState } from 'react';
-import { Position, SignalItem } from '@/lib/types';
+import { Position, SignalItem, AccountState } from '@/lib/types';
 import PositionsTable from './PositionsTable';
 import TradeHistoryTable from './TradeHistoryTable';
+import EquityCurveCard from './EquityCurveCard';
 import SignalsFeed from './SignalsFeed';
 import RiskCoachCard from './RiskCoachCard';
 import MacroBriefingCard from './MacroBriefingCard';
@@ -13,29 +12,34 @@ import {
   Radio,
   ShieldAlert,
   Globe,
-  TrendingUp
+  TrendingUp,
+  FileSpreadsheet
 } from 'lucide-react';
 
 interface BottomWorkspaceProps {
   positions: Position[];
   history: Position[];
   signals: SignalItem[];
+  account: AccountState;
   onRefreshPositions: () => void;
   onRefreshHistory: () => void;
   onTriggerTestSignal: () => void;
   isSimulatingSignal: boolean;
+  onOpenStatement?: () => void;
 }
 
-type TabType = 'POSITIONS' | 'HISTORY' | 'SIGNALS' | 'RISK_COACH' | 'MACRO';
+type TabType = 'POSITIONS' | 'HISTORY' | 'EQUITY_CURVE' | 'SIGNALS' | 'RISK_COACH' | 'MACRO';
 
 export default function BottomWorkspace({
   positions,
   history,
   signals,
+  account,
   onRefreshPositions,
   onRefreshHistory,
   onTriggerTestSignal,
-  isSimulatingSignal
+  isSimulatingSignal,
+  onOpenStatement
 }: BottomWorkspaceProps) {
   const [activeTab, setActiveTab] = useState<TabType>('POSITIONS');
 
@@ -78,6 +82,19 @@ export default function BottomWorkspace({
                 {history.length}
               </span>
             )}
+          </button>
+
+          {/* Equity & Balance Curve Tab (Feature 2!) */}
+          <button
+            onClick={() => setActiveTab('EQUITY_CURVE')}
+            className={`flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg transition-all ${
+              activeTab === 'EQUITY_CURVE'
+                ? 'bg-white dark:bg-cyan-500/15 text-cyan-700 dark:text-cyan-300 border border-slate-300 dark:border-cyan-500/30 shadow-sm'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-800/40'
+            }`}
+          >
+            <TrendingUp className="w-3.5 h-3.5 text-cyan-500" />
+            <span>Equity Curve & Analytics</span>
           </button>
 
           {/* Webhook Signals Feed */}
@@ -124,6 +141,18 @@ export default function BottomWorkspace({
             <span>Macro Briefing</span>
           </button>
         </div>
+
+        {/* Statement Quick Export Button (Feature 1!) */}
+        {onOpenStatement && (
+          <button
+            onClick={onOpenStatement}
+            className="flex items-center gap-1 px-2.5 py-1 my-1 mr-1 rounded bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs font-mono font-semibold transition-all border border-slate-300 dark:border-slate-700 shrink-0"
+            title="View & Export Official Exness Account Statement"
+          >
+            <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-500" />
+            <span className="hidden sm:inline">Statement</span>
+          </button>
+        )}
       </div>
 
       {/* Tab Content Body */}
@@ -133,7 +162,19 @@ export default function BottomWorkspace({
         )}
 
         {activeTab === 'HISTORY' && (
-          <TradeHistoryTable history={history} onRefresh={onRefreshHistory} />
+          <TradeHistoryTable
+            history={history}
+            onRefresh={onRefreshHistory}
+            onOpenStatement={onOpenStatement}
+          />
+        )}
+
+        {activeTab === 'EQUITY_CURVE' && (
+          <EquityCurveCard
+            history={history}
+            account={account}
+            onOpenStatement={onOpenStatement}
+          />
         )}
 
         {activeTab === 'SIGNALS' && (

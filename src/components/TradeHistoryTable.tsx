@@ -2,15 +2,20 @@
 
 import React, { useState } from 'react';
 import { Position } from '@/lib/types';
-import { ArrowDown, ArrowUp, Sparkles, BookOpen, Clock } from 'lucide-react';
+import { ArrowDown, ArrowUp, Sparkles, BookOpen, Clock, FileSpreadsheet } from 'lucide-react';
 import AIJournalModal from './AIJournalModal';
 
 interface TradeHistoryTableProps {
   history: Position[];
   onRefresh: () => void;
+  onOpenStatement?: () => void;
 }
 
-export default function TradeHistoryTable({ history, onRefresh }: TradeHistoryTableProps) {
+export default function TradeHistoryTable({
+  history,
+  onRefresh,
+  onOpenStatement
+}: TradeHistoryTableProps) {
   const [selectedTrade, setSelectedTrade] = useState<Position | null>(null);
   const [isRegenerating, setIsRegenerating] = useState<boolean>(false);
 
@@ -48,8 +53,35 @@ export default function TradeHistoryTable({ history, onRefresh }: TradeHistoryTa
     );
   }
 
+  const totalPnL = history.reduce((sum, t) => sum + t.profit, 0);
+
   return (
     <>
+      {/* Subheader bar with quick stats and Statement Export button */}
+      <div className="flex items-center justify-between pb-2 mb-2 border-b border-slate-200 dark:border-slate-800/80 px-1">
+        <div className="flex items-center gap-3 text-xs font-mono">
+          <span className="text-slate-500">
+            Total Closed: <strong className="text-slate-900 dark:text-slate-200">{history.length}</strong>
+          </span>
+          <span className="text-slate-500">
+            Realized P&L:{' '}
+            <strong className={totalPnL >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}>
+              {totalPnL >= 0 ? '+' : ''}${totalPnL.toFixed(2)}
+            </strong>
+          </span>
+        </div>
+
+        {onOpenStatement && (
+          <button
+            onClick={onOpenStatement}
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-700 text-xs font-mono font-semibold transition-all shadow-sm"
+          >
+            <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-500" />
+            <span>Official Statement</span>
+          </button>
+        )}
+      </div>
+
       <div className="w-full overflow-x-auto">
         <table className="w-full text-left text-xs font-mono">
           <thead className="bg-slate-100 dark:bg-[#0A0E18] text-[10px] text-slate-500 dark:text-slate-400 uppercase tracking-wider border-b border-slate-200 dark:border-slate-800">

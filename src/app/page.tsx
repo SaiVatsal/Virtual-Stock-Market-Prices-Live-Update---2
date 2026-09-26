@@ -15,6 +15,7 @@ import OrderTicket from '@/components/OrderTicket';
 import BottomWorkspace from '@/components/BottomWorkspace';
 import SettingsModal from '@/components/SettingsModal';
 import PineScriptModal from '@/components/PineScriptModal';
+import AccountStatementModal from '@/components/AccountStatementModal';
 
 const DEFAULT_ACCOUNT: AccountState = {
   balance: 100000,
@@ -81,6 +82,7 @@ export default function TradingTerminalPage() {
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
   const [isPineScriptOpen, setIsPineScriptOpen] = useState<boolean>(false);
+  const [isStatementOpen, setIsStatementOpen] = useState<boolean>(false);
   const [isSimulatingSignal, setIsSimulatingSignal] = useState<boolean>(false);
 
   // Sync theme with document class & localStorage
@@ -273,6 +275,7 @@ export default function TradingTerminalPage() {
         onSelectSymbol={setSelectedSymbol}
         onOpenSettings={() => setIsSettingsOpen(true)}
         onOpenPineScript={() => setIsPineScriptOpen(true)}
+        onOpenStatement={() => setIsStatementOpen(true)}
         onTriggerTestSignal={handleTriggerTestSignal}
         isSimulatingSignal={isSimulatingSignal}
         marketSchedule={marketSchedule}
@@ -287,12 +290,13 @@ export default function TradingTerminalPage() {
       <main className="flex-1 p-2.5 flex flex-col gap-2.5 max-w-[1920px] w-full mx-auto">
         {/* Upper Screen: 68% TradingView Chart | 32% Order Ticket */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-2.5 min-h-[460px]">
-          {/* TradingView Advanced Real-Time Chart Widget */}
+          {/* TradingView Advanced Real-Time Chart Widget (Single View or Dual Split Grid) */}
           <div className="lg:col-span-8 flex flex-col h-[480px] lg:h-full">
             <TradingViewChart
               symbol={selectedSymbol}
               theme={theme}
               quote={quotes[selectedSymbol]}
+              quotes={quotes}
               onSelectSymbol={setSelectedSymbol}
               onQuickTrade={handleQuickTrade}
             />
@@ -312,16 +316,18 @@ export default function TradingTerminalPage() {
           </div>
         </div>
 
-        {/* Lower Screen: Tabbed Dock (Positions, AI Journal, Webhook Signals, Risk Coach, Macro) */}
+        {/* Lower Screen: Tabbed Dock (Positions, AI Journal, Equity Curve, Webhook Signals, Risk Coach, Macro) */}
         <div className="flex-1">
           <BottomWorkspace
             positions={positions}
             history={history}
             signals={signals}
+            account={account}
             onRefreshPositions={handleRefreshAll}
             onRefreshHistory={handleRefreshAll}
             onTriggerTestSignal={handleTriggerTestSignal}
             isSimulatingSignal={isSimulatingSignal}
+            onOpenStatement={() => setIsStatementOpen(true)}
           />
         </div>
       </main>
@@ -336,6 +342,14 @@ export default function TradingTerminalPage() {
       <PineScriptModal
         isOpen={isPineScriptOpen}
         onClose={() => setIsPineScriptOpen(false)}
+      />
+
+      <AccountStatementModal
+        isOpen={isStatementOpen}
+        onClose={() => setIsStatementOpen(false)}
+        history={history}
+        account={account}
+        exnessAccount={exnessAccount}
       />
     </div>
   );

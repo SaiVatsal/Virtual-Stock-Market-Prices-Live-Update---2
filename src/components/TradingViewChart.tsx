@@ -2,14 +2,25 @@
 
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { SymbolId, PriceQuote } from '@/lib/types';
-import { Maximize2, Minimize2, RefreshCw, ArrowUp, ArrowDown, Zap } from 'lucide-react';
+import {
+  Maximize2,
+  Minimize2,
+  RefreshCw,
+  ArrowUp,
+  ArrowDown,
+  Columns,
+  Square,
+  Zap,
+  Layers
+} from 'lucide-react';
 
 interface TradingViewChartProps {
   symbol: SymbolId;
   theme?: 'dark' | 'light';
   quote?: PriceQuote;
+  quotes?: Record<SymbolId, PriceQuote>;
   onSelectSymbol?: (symbol: SymbolId) => void;
-  onQuickTrade?: (side: 'BUY' | 'SELL') => void;
+  onQuickTrade?: (side: 'BUY' | 'SELL', targetSymbol?: SymbolId) => void;
 }
 
 const TV_SYMBOL_MAP: Record<SymbolId, string> = {
@@ -22,13 +33,20 @@ export default function TradingViewChart({
   symbol,
   theme = 'dark',
   quote,
+  quotes,
   onSelectSymbol,
   onQuickTrade
 }: TradingViewChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const container2Ref = useRef<HTMLDivElement>(null);
   const chartWrapperRef = useRef<HTMLDivElement>(null);
+
   const [scriptLoaded, setScriptLoaded] = useState<boolean>(false);
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
+  const [isDualChart, setIsDualChart] = useState<boolean>(false);
+  const [secondarySymbol, setSecondarySymbol] = useState<SymbolId>(
+    symbol === 'XAUUSD' ? 'EURUSD' : 'XAUUSD'
+  );
   const [widgetKey, setWidgetKey] = useState<number>(0);
 
   // Load s3.tradingview.com/tv.js script once
@@ -55,73 +73,92 @@ export default function TradingViewChart({
     document.head.appendChild(script);
   }, []);
 
-  // Initialize or re-create TradingView widget
-  const initWidget = useCallback(() => {
+  // Helper to construct TradingView widget config
+  const createWidgetConfig = (targetSym: SymbolId, containerId: string, isDark: boolean) => ({
+    autosize: true,
+    symbol: TV_SYMBOL_MAP[targetSym] || 'OANDA:XAUUSD',
+    interval: '15',
+    timezone: 'Etc/UTC',
+    theme: isDark ? 'dark' : 'light',
+    style: '1',
+    locale: 'en',
+    toolbar_bg: isDark ? '#0A0E17' : '#F1F5F9',
+    enable_publishing: false,
+    allow_symbol_change: false,
+    container_id: containerId,
+    hide_side_toolbar: false,
+    studies: ['MASimple@tv-basicstudies', 'RSI@tv-basicstudies'],
+    overrides: isDark
+      ? {
+          'paneProperties.background': '#070A0F',
+          'paneProperties.vertGridProperties.color': '#111726',
+          'paneProperties.horzGridProperties.color': '#111726',
+          'symbolWatermarkProperties.transparency': 90,
+          'scalesProperties.textColor': '#64748B',
+          'mainSeriesProperties.candleStyle.upColor': '#10B981',
+          'mainSeriesProperties.candleStyle.downColor': '#F43F5E',
+          'mainSeriesProperties.candleStyle.drawWick': true,
+          'mainSeriesProperties.candleStyle.drawBorder': true,
+          'mainSeriesProperties.candleStyle.borderColor': '#334155',
+          'mainSeriesProperties.candleStyle.borderUpColor': '#10B981',
+          'mainSeriesProperties.candleStyle.borderDownColor': '#F43F5E',
+          'mainSeriesProperties.candleStyle.wickUpColor': '#10B981',
+          'mainSeriesProperties.candleStyle.wickDownColor': '#F43F5E'
+        }
+      : {
+          'paneProperties.background': '#FFFFFF',
+          'paneProperties.vertGridProperties.color': '#E2E8F0',
+          'paneProperties.horzGridProperties.color': '#E2E8F0',
+          'scalesProperties.textColor': '#475569',
+          'mainSeriesProperties.candleStyle.upColor': '#059669',
+          'mainSeriesProperties.candleStyle.downColor': '#E11D48',
+          'mainSeriesProperties.candleStyle.drawWick': true,
+          'mainSeriesProperties.candleStyle.drawBorder': true,
+          'mainSeriesProperties.candleStyle.borderColor': '#CBD5E1',
+          'mainSeriesProperties.candleStyle.borderUpColor': '#059669',
+          'mainSeriesProperties.candleStyle.borderDownColor': '#E11D48'
+        }
+  });
+
+  // Initialize or re-create TradingView widgets
+  const initWidgets = useCallback(() => {
     if (!scriptLoaded || !containerRef.current) return;
+    const isDark = theme === 'dark';
 
-    const tvSymbol = TV_SYMBOL_MAP[symbol] || 'OANDA:XAUUSD';
-    const containerId = `tv_chart_container_${symbol}_${isFullscreen ? 'fs' : 'normal'}`;
-
-    containerRef.current.innerHTML = `<div id="${containerId}" style="height: 100%; width: 100%;"></div>`;
+    // Primary Chart
+    const containerId1 = `tv_chart_main_${symbol}_${isDualChart ? 'dual' : 'single'}_${
+      isFullscreen ? 'fs' : 'normal'
+    }`;
+    containerRef.current.innerHTML = `<div id="${containerId1}" style="height: 100%; width: 100%;"></div>`;
 
     try {
       if ((window as any).TradingView) {
-        const isDark = theme === 'dark';
-
-        new (window as any).TradingView.widget({
-          autosize: true,
-          symbol: tvSymbol,
-          interval: '15',
-          timezone: 'Etc/UTC',
-          theme: isDark ? 'dark' : 'light',
-          style: '1',
-          locale: 'en',
-          toolbar_bg: isDark ? '#0A0E17' : '#F1F5F9',
-          enable_publishing: false,
-          allow_symbol_change: false,
-          container_id: containerId,
-          hide_side_toolbar: false,
-          studies: ['MASimple@tv-basicstudies', 'RSI@tv-basicstudies'],
-          overrides: isDark
-            ? {
-                'paneProperties.background': '#070A0F',
-                'paneProperties.vertGridProperties.color': '#111726',
-                'paneProperties.horzGridProperties.color': '#111726',
-                'symbolWatermarkProperties.transparency': 90,
-                'scalesProperties.textColor': '#64748B',
-                'mainSeriesProperties.candleStyle.upColor': '#10B981',
-                'mainSeriesProperties.candleStyle.downColor': '#F43F5E',
-                'mainSeriesProperties.candleStyle.drawWick': true,
-                'mainSeriesProperties.candleStyle.drawBorder': true,
-                'mainSeriesProperties.candleStyle.borderColor': '#334155',
-                'mainSeriesProperties.candleStyle.borderUpColor': '#10B981',
-                'mainSeriesProperties.candleStyle.borderDownColor': '#F43F5E',
-                'mainSeriesProperties.candleStyle.wickUpColor': '#10B981',
-                'mainSeriesProperties.candleStyle.wickDownColor': '#F43F5E'
-              }
-            : {
-                'paneProperties.background': '#FFFFFF',
-                'paneProperties.vertGridProperties.color': '#E2E8F0',
-                'paneProperties.horzGridProperties.color': '#E2E8F0',
-                'scalesProperties.textColor': '#475569',
-                'mainSeriesProperties.candleStyle.upColor': '#059669',
-                'mainSeriesProperties.candleStyle.downColor': '#E11D48',
-                'mainSeriesProperties.candleStyle.drawWick': true,
-                'mainSeriesProperties.candleStyle.drawBorder': true,
-                'mainSeriesProperties.candleStyle.borderColor': '#CBD5E1',
-                'mainSeriesProperties.candleStyle.borderUpColor': '#059669',
-                'mainSeriesProperties.candleStyle.borderDownColor': '#E11D48'
-              }
-        });
+        new (window as any).TradingView.widget(createWidgetConfig(symbol, containerId1, isDark));
       }
     } catch (err) {
-      console.error('Error creating TradingView widget:', err);
+      console.error('Error creating primary TradingView widget:', err);
     }
-  }, [symbol, theme, scriptLoaded, isFullscreen]);
+
+    // Secondary Chart (if in Dual Grid mode)
+    if (isDualChart && container2Ref.current) {
+      const containerId2 = `tv_chart_sec_${secondarySymbol}_${isFullscreen ? 'fs' : 'normal'}`;
+      container2Ref.current.innerHTML = `<div id="${containerId2}" style="height: 100%; width: 100%;"></div>`;
+
+      try {
+        if ((window as any).TradingView) {
+          new (window as any).TradingView.widget(
+            createWidgetConfig(secondarySymbol, containerId2, isDark)
+          );
+        }
+      } catch (err) {
+        console.error('Error creating secondary TradingView widget:', err);
+      }
+    }
+  }, [symbol, secondarySymbol, theme, scriptLoaded, isFullscreen, isDualChart]);
 
   useEffect(() => {
-    initWidget();
-  }, [initWidget, widgetKey]);
+    initWidgets();
+  }, [initWidgets, widgetKey]);
 
   // Handle Fullscreen toggle
   const toggleFullscreen = () => {
@@ -139,8 +176,14 @@ export default function TradingViewChart({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isFullscreen]);
 
-  const currentBid = quote?.bid || (symbol === 'XAUUSD' ? 4284.90 : symbol === 'EURUSD' ? 1.13850 : 84029.00);
-  const currentAsk = quote?.ask || (symbol === 'XAUUSD' ? 4285.25 : symbol === 'EURUSD' ? 1.13862 : 84044.00);
+  const currentBid1 = quote?.bid || (symbol === 'XAUUSD' ? 4284.90 : symbol === 'EURUSD' ? 1.13850 : 84029.00);
+  const currentAsk1 = quote?.ask || (symbol === 'XAUUSD' ? 4285.25 : symbol === 'EURUSD' ? 1.13862 : 84044.00);
+
+  const secQuote = quotes?.[secondarySymbol];
+  const currentBid2 =
+    secQuote?.bid || (secondarySymbol === 'XAUUSD' ? 4284.90 : secondarySymbol === 'EURUSD' ? 1.13850 : 84029.00);
+  const currentAsk2 =
+    secQuote?.ask || (secondarySymbol === 'XAUUSD' ? 4285.25 : secondarySymbol === 'EURUSD' ? 1.13862 : 84044.00);
 
   return (
     <div
@@ -152,19 +195,19 @@ export default function TradingViewChart({
       }`}
     >
       {/* Chart Top Header Strip */}
-      <div className="flex items-center justify-between px-3 py-2 bg-slate-100 dark:bg-[#0B0F19] border-b border-slate-200 dark:border-slate-800/80 text-xs shrink-0">
+      <div className="flex items-center justify-between px-3 py-2 bg-slate-100 dark:bg-[#0B0F19] border-b border-slate-200 dark:border-slate-800/80 text-xs shrink-0 flex-wrap gap-2">
         <div className="flex items-center gap-2 flex-wrap">
           <span className="flex h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
           <span className="font-extrabold text-slate-900 dark:text-slate-100 tracking-wider">
             {symbol} / USD
           </span>
           <span className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-cyan-100 dark:bg-cyan-950 text-cyan-700 dark:text-cyan-400 border border-cyan-300 dark:border-cyan-800/50">
-            TV Advanced Chart
+            TV Advanced {isDualChart ? 'Dual' : 'Single'}
           </span>
 
-          {/* If Fullscreen: Quick symbol switcher on the floating bar */}
+          {/* If Fullscreen: Primary symbol switcher */}
           {isFullscreen && onSelectSymbol && (
-            <div className="flex items-center gap-1 ml-2 bg-slate-200 dark:bg-slate-800 p-0.5 rounded">
+            <div className="flex items-center gap-1 ml-1 bg-slate-200 dark:bg-slate-800 p-0.5 rounded">
               {(['XAUUSD', 'EURUSD', 'BTCUSD'] as SymbolId[]).map((s) => (
                 <button
                   key={s}
@@ -182,31 +225,79 @@ export default function TradingViewChart({
           )}
 
           {/* Live Quote Preview in Fullscreen */}
-          {isFullscreen && quote && (
-            <div className="flex items-center gap-2 font-mono text-xs ml-2">
-              <span className="text-slate-500">BID:</span>
-              <span className="font-bold text-rose-500 dark:text-rose-400">${currentBid}</span>
-              <span className="text-slate-500">ASK:</span>
-              <span className="font-bold text-emerald-600 dark:text-emerald-400">${currentAsk}</span>
+          {isFullscreen && (
+            <div className="flex items-center gap-1.5 font-mono text-[11px] ml-1">
+              <span className="text-slate-500">B:</span>
+              <span className="font-bold text-rose-500">${currentBid1}</span>
+              <span className="text-slate-500">A:</span>
+              <span className="font-bold text-emerald-600">${currentAsk1}</span>
+            </div>
+          )}
+
+          {/* Secondary chart indicator & selector when in Dual Mode */}
+          {isDualChart && (
+            <div className="flex items-center gap-1.5 pl-2 border-l border-slate-300 dark:border-slate-700">
+              <span className="text-slate-500 font-mono text-[10px]">Split 2:</span>
+              <div className="flex items-center gap-1 bg-slate-200 dark:bg-slate-800 p-0.5 rounded">
+                {(['EURUSD', 'XAUUSD', 'BTCUSD'] as SymbolId[]).map((s) => (
+                  <button
+                    key={s}
+                    onClick={() => setSecondarySymbol(s)}
+                    className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-bold ${
+                      secondarySymbol === s
+                        ? 'bg-amber-500 text-black shadow-sm'
+                        : 'text-slate-600 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-700'
+                    }`}
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
+              <span className="font-mono text-[10px] text-slate-500 hidden xl:inline">
+                ${currentBid2}
+              </span>
             </div>
           )}
         </div>
 
-        {/* Action Controls: Quick Buy/Sell in Fullscreen, Refresh & Fullscreen Button */}
-        <div className="flex items-center gap-2">
+        {/* Action Controls: Dual/Single Grid Toggle, Quick Trade, Refresh & Fullscreen Button */}
+        <div className="flex items-center gap-1.5">
+          {/* Dual Split-Chart Grid Mode Toggle (Feature 3!) */}
+          <button
+            onClick={() => setIsDualChart((d) => !d)}
+            title={isDualChart ? 'Switch to Single Chart View' : 'Switch to Dual Split-Chart Grid View'}
+            className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-mono font-semibold transition-all ${
+              isDualChart
+                ? 'bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/40 shadow-sm'
+                : 'bg-slate-200 dark:bg-slate-800/80 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700'
+            }`}
+          >
+            {isDualChart ? (
+              <>
+                <Square className="w-3.5 h-3.5 text-amber-500" />
+                <span className="text-[11px] hidden sm:inline">Single View</span>
+              </>
+            ) : (
+              <>
+                <Columns className="w-3.5 h-3.5 text-cyan-600 dark:text-cyan-400" />
+                <span className="text-[11px] hidden sm:inline">Dual Grid</span>
+              </>
+            )}
+          </button>
+
           {/* Quick 1-click execution in Fullscreen */}
           {isFullscreen && onQuickTrade && (
-            <div className="flex items-center gap-1.5 mr-2">
+            <div className="flex items-center gap-1">
               <button
-                onClick={() => onQuickTrade('SELL')}
-                className="flex items-center gap-1 px-2.5 py-1 rounded bg-rose-600 hover:bg-rose-500 text-white font-extrabold text-[11px] font-mono shadow-sm"
+                onClick={() => onQuickTrade('SELL', symbol)}
+                className="flex items-center gap-0.5 px-2 py-1 rounded bg-rose-600 hover:bg-rose-500 text-white font-extrabold text-[11px] font-mono shadow-sm"
               >
                 <ArrowDown className="w-3 h-3 stroke-[3]" />
                 <span>SELL</span>
               </button>
               <button
-                onClick={() => onQuickTrade('BUY')}
-                className="flex items-center gap-1 px-2.5 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-[11px] font-mono shadow-sm"
+                onClick={() => onQuickTrade('BUY', symbol)}
+                className="flex items-center gap-0.5 px-2 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-[11px] font-mono shadow-sm"
               >
                 <ArrowUp className="w-3 h-3 stroke-[3]" />
                 <span>BUY</span>
@@ -231,7 +322,7 @@ export default function TradingViewChart({
             {isFullscreen ? (
               <>
                 <Minimize2 className="w-3.5 h-3.5" />
-                <span className="font-mono text-[11px]">Exit Fullscreen (Esc)</span>
+                <span className="font-mono text-[11px]">Exit (Esc)</span>
               </>
             ) : (
               <>
@@ -243,9 +334,23 @@ export default function TradingViewChart({
         </div>
       </div>
 
-      {/* Chart Canvas */}
-      <div className="relative flex-1 w-full h-full min-h-[360px]">
-        <div ref={containerRef} className="h-full w-full" />
+      {/* Chart Canvas: Single View or Dual Grid View */}
+      <div className="relative flex-1 w-full h-full min-h-[380px] overflow-hidden">
+        {isDualChart ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 h-full w-full divide-y md:divide-y-0 md:divide-x divide-slate-200 dark:divide-slate-800">
+            {/* Left Chart (Primary Symbol) */}
+            <div className="relative h-full w-full">
+              <div ref={containerRef} className="h-full w-full" />
+            </div>
+
+            {/* Right Chart (Secondary Symbol) */}
+            <div className="relative h-full w-full">
+              <div ref={container2Ref} className="h-full w-full" />
+            </div>
+          </div>
+        ) : (
+          <div ref={containerRef} className="h-full w-full" />
+        )}
 
         {!scriptLoaded && (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-white dark:bg-[#070A0F] text-slate-500 gap-3">
