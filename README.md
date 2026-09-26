@@ -1,120 +1,194 @@
-# NEXUS TRADER — Virtual Stock & Forex Paper Trading Platform
+# Nexus Trader
 
-An institutional-grade simulated paper-trading platform for **Forex & Gold (XAUUSD, EURUSD, BTCUSD)** built with Next.js 14, Tailwind CSS, embedded TradingView Advanced Real-Time Charts, OANDA v20 REST pricing engine, Pine Script webhooks, and a server-side Claude 3.5 AI suite.
+Nexus Trader is a virtual trading terminal built for practicing trading without using real money.
 
-![Nexus Trader Terminal](https://raw.githubusercontent.com/tradingview/tradingview/master/public/logo.png)
+It supports Forex, Gold, and Crypto markets and provides a realistic trading experience with charts, orders, risk management, analytics, and an AI trading journal.
 
----
+## What You Can Do
 
-## 🌟 Key Features
+* Buy and sell EUR/USD, XAU/USD, and BTC/USD
+* Place Market, Limit, and Stop orders
+* Set and modify Stop Loss and Take Profit
+* Drag trade levels directly on the chart
+* View live prices and trading information
+* Track balance, equity, margin, and P&L
+* View open positions and pending orders
+* Analyze trading performance
+* Export account statements
+* Receive risk and trading discipline warnings
+* Review trades using AI
+* Use TradingView alerts through webhooks
+* Switch between dark and light mode
 
-### 1. Embedded TradingView Advanced Real-Time Chart
-- Native integration with the free TradingView Advanced Chart widget (`s3.tradingview.com/tv.js`).
-- Complete technical analysis toolbar, multi-timeframe candle charting, RSI/MA indicators, and drawing tools.
-- Auto-synchronized with the active desk symbol (`OANDA:XAUUSD`, `FX:EURUSD`, `BINANCE:BTCUSDT`).
+## Tech Stack
 
-### 2. Live Market Price Feed & Execution Engine (OMS)
-- **Primary Data:** OANDA v20 REST API (`api-fxpractice.oanda.com`) purpose-built for forex and gold practice accounts.
-- **Secondary Fallback:** Twelve Data REST API.
-- **Internal High-Fidelity Tick Engine:** Realistic Brownian motion micro-tick simulator running offline or when external keys are not supplied.
-- **Live Stream:** Real-time Server-Sent Events (SSE) `/api/stream/market` pushing sub-second quotes, mark-to-market P&L, margin calculations, and auto-triggering Stop Loss (SL) and Take Profit (TP).
+### Frontend
 
-### 3. TradingView Webhook Endpoint & Custom Pine Script SMC Indicator
-- **Endpoint:** `POST /api/webhooks/tradingview` receives JSON alert payloads fired by your TradingView indicators.
-- **Ready-to-Paste Pine Script v5:**
-  - Includes detection for:
-    - Swing High/Low Liquidity Sweeps
-    - Bullish & Bearish Order Blocks (OB)
-    - Fair Value Gaps (FVG)
-    - Market Structure Shifts (MSS / CHoCH)
-  - Pre-configured `alertcondition()` definitions dispatching structured JSON to your webhook.
-- **Live Signals Feed:** Real-time stream of incoming alerts with empirical win-rate calculations and Claude structural context notes.
-- **In-App Simulator:** 1-Click "Simulate Alert" button to test the ingestion pipeline without external setup.
+* Next.js 14
+* React 18
+* TypeScript
+* Tailwind CSS
+* Lucide React
+* TradingView Charts
 
-### 4. Server-Side Claude AI Suite (Anthropic Claude 3.5 Sonnet)
-*All AI logic runs strictly server-side; API keys are never exposed to client network calls.*
+### Backend
 
-- **AI Trade Journal:**
-  - On trade close, sends execution parameters, holding duration, and SMC structure context to Claude.
-  - Returns a structured technical critique (Grade A+ to F, Confluence Score 1-10, Liquidity Sweep analysis, Order Block mitigation, Fair Value Gap evaluation, Mistakes, and Actionable Lessons).
-- **Signal Confidence:**
-  - Computes empirical historical win rates (% win, sample size, profit factor, average R:R) from stored trade history.
-  - Pairs each signal with a concise 2-sentence institutional structural note (never an unexplained buy/sell call).
-- **Macro Briefing:**
-  - Analyzes high-impact economic calendar events (FOMC, NFP, CPI, ECB).
-  - Synthesizes pre-session volatility forecasts and risk windows for Gold, EUR, and BTC.
-- **Risk Coach HUD:**
-  - Continuously audits your portfolio for toxic behavioral patterns:
-    - **Position-Size Creep:** Sizing up abruptly after wins or losses.
-    - **Revenge Trading:** Re-entering positions within 5 minutes of a loss.
-    - **News Overtrading:** Rapid-fire order clusters during volatility spikes.
-    - **Stop Loss Omission:** Operating unhedged positions without defined risk.
-  - Surfaced as a live Risk Health Score (0-100) card with actionable coaching guidance.
+* Node.js
+* Next.js API Routes
+* JSON file-based storage
+* Vitest
 
----
+### External Services
 
-## 🚀 Getting Started
+* TradingView
+* OANDA
+* Twelve Data
+* Anthropic Claude
 
-### 1. Install Dependencies
-```bash
-npm install
+## Main Parts
+
+### Trading Chart
+
+The chart supports live market data and allows users to interact with trades directly.
+
+Users can:
+
+* Place pending orders
+* Move Stop Loss and Take Profit
+* Move pending orders
+* Switch between trading and normal chart navigation
+* Open charts in fullscreen
+* View two charts at the same time
+
+### Order Panel
+
+The order panel is used to place trades.
+
+It supports:
+
+* Market orders
+* Limit orders
+* Stop orders
+* Lot size selection
+* Stop Loss
+* Take Profit
+* Margin calculation
+
+### Positions
+
+The positions section shows current trades and pending orders.
+
+It displays information such as:
+
+* Entry price
+* Current price
+* P&L
+* Margin
+* Position size
+
+Trades can also be closed or cancelled from here.
+
+### Analytics
+
+Nexus Trader keeps track of trading performance including:
+
+* Net profit and loss
+* Win rate
+* Profit factor
+* Expected payoff
+* Maximum drawdown
+* Equity growth
+* Approximate Sharpe ratio
+
+Account statements can also be exported as CSV or printed as PDF.
+
+### AI Trade Journal
+
+The AI journal reviews completed trades and provides feedback about the trade.
+
+It can identify things such as:
+
+* Risk management problems
+* Poor entries
+* Overtrading
+* Revenge trading
+* SMC-related observations
+
+### Risk Coach
+
+The Risk Coach watches trading behaviour and provides warnings when the trader starts taking unnecessary risks.
+
+Examples include:
+
+* Increasing lot size too quickly
+* Overleveraging
+* Revenge trading
+* Taking too many trades
+
+## Backend
+
+The main trading logic is handled by the market engine.
+
+It manages:
+
+* Order creation
+* Position management
+* Margin calculations
+* P&L calculations
+* Stop Loss and Take Profit
+* Pending orders
+* Trade modifications
+* Order cancellation
+
+The project stores account data and trading history in:
+
+`data/trading_store.json`
+
+## API
+
+Some of the main API routes are:
+
+```text
+POST /api/trade/order
+POST /api/trade/close
+POST /api/trade/modify
+POST /api/trade/cancel
+
+GET /api/stream/market
+
+POST /api/webhooks/tradingview
+
+GET /api/market-status
+GET /api/journal
+GET /api/risk-coach
+GET /api/macro
+
+GET /api/settings
+POST /api/settings
 ```
 
-### 2. Configuration (Optional)
-Create a `.env.local` file or configure via the in-app **Settings** modal:
-```env
-# Anthropic Claude API Key (Server-side AI suite)
-ANTHROPIC_API_KEY=sk-ant-api03-...
+## Market Schedule
 
-# OANDA v20 Practice Environment (Free practice account)
-OANDA_API_KEY=your_oanda_practice_token
-OANDA_ACCOUNT_ID=101-004-xxxxxxx-001
+Forex follows normal market hours.
 
-# Twelve Data (Optional Fallback)
-TWELVE_DATA_API_KEY=your_twelve_data_key
+Crypto can be traded 24/7.
 
-# Webhook Secret Token (Optional for alert authentication)
-TRADINGVIEW_WEBHOOK_SECRET=sk_tv_smc_institutional
-```
+There is also a Weekend OTC Practice Mode so the application can still be used for practice when the normal Forex market is closed.
 
-*Note: If no API keys are provided, the platform automatically runs in realistic hybrid simulation mode with full AI heuristic fallback and high-fidelity tick generation.*
+## Testing
 
-### 3. Run Development Server
-```bash
-npm run dev
-```
-Open [http://localhost:3000](http://localhost:3000) in your browser.
+The project includes a Vitest test suite.
 
-### 4. Run Test Suite
-```bash
-npm run test
-```
-Executes all unit, integration, and E2E vitest test suites covering market matching, margin calculations, webhooks, risk coaching, and AI services.
+There are currently **20 passing tests** covering important areas such as:
 
----
+* Order handling
+* Margin calculations
+* Trading analytics
+* Credentials
+* Webhooks
 
-## 📡 API Reference
+## Project Goal
 
-| Endpoint | Method | Description |
-|---|---|---|
-| `/api/exness` | `GET / POST` | Exness MT5 Gateway status, account telemetry, and credentials authentication |
-| `/api/exness/trade` | `POST` | Route trade executions directly through Exness platform bridge |
-| `/api/stream/market` | `GET` | SSE stream pushing live quotes, portfolio equity, margin, and open positions |
-| `/api/trade/order` | `POST` | Execute market or limit order with SL/TP parameters |
-| `/api/trade/close` | `POST` | Close position, calculate realized P&L, trigger AI Trade Journal critique |
-| `/api/webhooks/tradingview` | `POST` | Ingestion endpoint for TradingView Pine Script alert payloads |
-| `/api/signals` | `GET / POST` | Fetch received signals / trigger simulated alert test |
-| `/api/journal` | `GET / POST` | Fetch trade history with AI critiques / regenerate critique |
-| `/api/risk-coach` | `GET` | Retrieve behavioral risk audit & psychological health score |
-| `/api/macro` | `GET / POST` | Fetch economic calendar & Claude pre-session volatility brief |
-| `/api/settings` | `GET / POST` | Read masked credentials & update platform settings |
+The main goal of Nexus Trader is to create a realistic trading environment where users can practice trading, understand risk management, and analyze their performance without risking real money.
 
----
-
-## 🛠️ Tech Stack
-- **Framework:** Next.js 14+ (App Router)
-- **Language:** TypeScript
-- **Styling:** Tailwind CSS + Custom Institutional Terminal Palette
-- **Icons:** Lucide React
-- **AI SDK:** `@anthropic-ai/sdk` (Claude 3.5 Sonnet)
-- **Testing:** Vitest
+It is mainly designed as a **paper-trading and learning platform**.
