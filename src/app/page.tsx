@@ -78,9 +78,44 @@ export default function TradingTerminalPage() {
     type: 'PRO'
   });
 
+  const [theme, setTheme] = useState<'dark' | 'light'>('dark');
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
   const [isPineScriptOpen, setIsPineScriptOpen] = useState<boolean>(false);
   const [isSimulatingSignal, setIsSimulatingSignal] = useState<boolean>(false);
+
+  // Sync theme with document class & localStorage
+  useEffect(() => {
+    try {
+      const savedTheme = localStorage.getItem('nexus_terminal_theme') as 'dark' | 'light' | null;
+      if (savedTheme) {
+        setTheme(savedTheme);
+        if (savedTheme === 'dark') {
+          document.documentElement.classList.add('dark');
+        } else {
+          document.documentElement.classList.remove('dark');
+        }
+      } else {
+        document.documentElement.classList.add('dark');
+      }
+    } catch (e) {
+      document.documentElement.classList.add('dark');
+    }
+  }, []);
+
+  const handleToggleTheme = () => {
+    setTheme((prev) => {
+      const nextTheme = prev === 'dark' ? 'light' : 'dark';
+      try {
+        localStorage.setItem('nexus_terminal_theme', nextTheme);
+      } catch (e) {}
+      if (nextTheme === 'dark') {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+      return nextTheme;
+    });
+  };
 
   // Fetch market schedule & Exness account status
   const fetchMarketStatus = useCallback(async () => {
@@ -200,6 +235,28 @@ export default function TradingTerminalPage() {
     }
   };
 
+  const handleQuickTrade = async (side: 'BUY' | 'SELL') => {
+    try {
+      await fetch('/api/trade/order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          symbol: selectedSymbol,
+          side,
+          type: 'MARKET',
+          lots: selectedSymbol === 'BTCUSD' ? 0.5 : 1.0,
+          smcContext: {
+            pattern: 'Fullscreen Quick Execution',
+            timeframe: '15m'
+          }
+        })
+      });
+      handleRefreshAll();
+    } catch (err) {
+      console.error('Quick trade error:', err);
+    }
+  };
+
   const handleRefreshAll = () => {
     fetchHistory();
     fetchSignals();
@@ -207,7 +264,7 @@ export default function TradingTerminalPage() {
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-[#05080E] text-slate-100">
+    <div className="flex flex-col min-h-screen bg-slate-100 dark:bg-[#05080E] text-slate-900 dark:text-slate-100 transition-colors">
       {/* Exness Top Navigation & Telemetry */}
       <HeaderNav
         account={account}
@@ -222,6 +279,8 @@ export default function TradingTerminalPage() {
         marketMode={marketMode}
         onToggleMarketMode={handleToggleMarketMode}
         exnessAccount={exnessAccount}
+        theme={theme}
+        onToggleTheme={handleToggleTheme}
       />
 
       {/* Main Trading Floor Workspace */}
@@ -230,7 +289,13 @@ export default function TradingTerminalPage() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-2.5 min-h-[460px]">
           {/* TradingView Advanced Real-Time Chart Widget */}
           <div className="lg:col-span-8 flex flex-col h-[480px] lg:h-full">
-            <TradingViewChart symbol={selectedSymbol} />
+            <TradingViewChart
+              symbol={selectedSymbol}
+              theme={theme}
+              quote={quotes[selectedSymbol]}
+              onSelectSymbol={setSelectedSymbol}
+              onQuickTrade={handleQuickTrade}
+            />
           </div>
 
           {/* Exness Institutional Order Ticket Panel */}

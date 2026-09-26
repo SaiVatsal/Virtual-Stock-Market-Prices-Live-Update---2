@@ -11,7 +11,9 @@ import {
   ShieldCheck,
   AlertCircle,
   ToggleLeft,
-  ToggleRight
+  ToggleRight,
+  Sun,
+  Moon
 } from 'lucide-react';
 
 interface HeaderNavProps {
@@ -31,6 +33,8 @@ interface HeaderNavProps {
     server: string;
     type: string;
   };
+  theme: 'dark' | 'light';
+  onToggleTheme: () => void;
 }
 
 export default function HeaderNav({
@@ -45,7 +49,9 @@ export default function HeaderNav({
   marketSchedule,
   marketMode,
   onToggleMarketMode,
-  exnessAccount
+  exnessAccount,
+  theme,
+  onToggleTheme
 }: HeaderNavProps) {
   const symbols: { id: SymbolId; label: string; sub: string }[] = [
     { id: 'XAUUSD', label: 'GOLD / USD', sub: 'Spot Commodities' },
@@ -57,38 +63,37 @@ export default function HeaderNav({
   const isWeekendClosed = marketSchedule && !marketSchedule.isForexOpen;
 
   return (
-    <header className="w-full bg-[#070A10] border-b border-slate-800/90 sticky top-0 z-40 px-3 py-2">
+    <header className="w-full bg-white dark:bg-[#070A10] border-b border-slate-200 dark:border-slate-800/90 sticky top-0 z-40 px-3 py-2 transition-colors">
       <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-2.5">
         {/* Brand & Exness Terminal Identity */}
         <div className="flex items-center gap-3 flex-wrap">
           <div className="flex items-center gap-2">
             {/* Exness-inspired logo mark */}
-            <div className="h-8 px-2 rounded-lg bg-gradient-to-r from-amber-500 via-yellow-500 to-amber-600 flex items-center justify-center font-extrabold text-black tracking-tighter text-xs shadow-md shadow-amber-500/20">
+            <div className="h-8 px-2.5 rounded-lg bg-gradient-to-r from-amber-500 via-yellow-500 to-amber-600 flex items-center justify-center font-black text-black tracking-tighter text-xs shadow-md shadow-amber-500/20">
               EXNESS
             </div>
             <div>
               <div className="flex items-center gap-1.5">
-                <span className="font-extrabold text-xs tracking-wider text-slate-100">
-                  TERMINAL <span className="text-cyan-400">PRO</span>
+                <span className="font-extrabold text-xs tracking-wider text-slate-900 dark:text-slate-100">
+                  TERMINAL <span className="text-cyan-600 dark:text-cyan-400">PRO</span>
                 </span>
-                <span className="text-[9px] uppercase font-mono px-1.5 py-0.2 rounded bg-amber-950/70 text-amber-300 border border-amber-800/40">
+                <span className="text-[9px] uppercase font-mono px-1.5 py-0.2 rounded bg-amber-100 dark:bg-amber-950/70 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-800/40">
                   {exnessAccount?.type || 'PRO'} DEMO
                 </span>
               </div>
-              <p className="text-[10px] text-slate-400 font-mono">
+              <p className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">
                 {exnessAccount?.id || 'EX-9482104'} • {exnessAccount?.server || 'Exness-Trial2'}
               </p>
             </div>
           </div>
 
-          <div className="h-5 w-px bg-slate-800 hidden sm:block" />
+          <div className="h-5 w-px bg-slate-300 dark:bg-slate-800 hidden sm:block" />
 
           {/* Symbol Selector with Real Market Prices */}
-          <div className="flex items-center gap-1 bg-[#0B0F1A] p-1 rounded-lg border border-slate-800/90">
+          <div className="flex items-center gap-1 bg-slate-100 dark:bg-[#0B0F1A] p-1 rounded-lg border border-slate-200 dark:border-slate-800/90">
             {symbols.map((s) => {
               const q = quotes[s.id];
               const isSelected = selectedSymbol === s.id;
-              const isPositiveChange = q && q.change24h >= 0;
 
               return (
                 <button
@@ -96,18 +101,18 @@ export default function HeaderNav({
                   onClick={() => onSelectSymbol(s.id)}
                   className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-xs transition-all ${
                     isSelected
-                      ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/50 shadow-sm font-bold'
-                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50 border border-transparent'
+                      ? 'bg-cyan-500/20 text-cyan-700 dark:text-cyan-300 border border-cyan-500/50 shadow-sm font-bold'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-800/50 border border-transparent'
                   }`}
                 >
                   <span className="font-mono">{s.id}</span>
                   {q && (
-                    <span className="font-mono text-[11px] text-slate-200 font-semibold">
+                    <span className="font-mono text-[11px] text-slate-800 dark:text-slate-200 font-semibold">
                       ${q.bid.toFixed(s.id === 'EURUSD' ? 5 : 2)}
                     </span>
                   )}
                   {s.id === 'BTCUSD' && (
-                    <span className="text-[9px] font-mono font-bold px-1 rounded bg-purple-950 text-purple-300 border border-purple-800/40">
+                    <span className="text-[9px] font-mono font-bold px-1 rounded bg-purple-100 dark:bg-purple-950 text-purple-800 dark:text-purple-300 border border-purple-300 dark:border-purple-800/40">
                       24/7
                     </span>
                   )}
@@ -119,15 +124,15 @@ export default function HeaderNav({
           {/* Market Status & Weekend Toggle like Exness */}
           <div className="flex items-center gap-2">
             {isWeekendClosed ? (
-              <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-rose-950/30 border border-rose-800/40 text-[11px] font-mono text-rose-300">
+              <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-rose-100 dark:bg-rose-950/30 border border-rose-300 dark:border-rose-800/40 text-[11px] font-mono text-rose-800 dark:text-rose-300">
                 <span className="h-2 w-2 rounded-full bg-rose-500 animate-pulse" />
                 <span className="font-bold">WEEKEND: MARKET CLOSED</span>
-                <span className="text-slate-400 text-[10px] hidden md:inline">
+                <span className="text-slate-500 dark:text-slate-400 text-[10px] hidden md:inline">
                   (Opens Sun 21:00 UTC)
                 </span>
               </div>
             ) : (
-              <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-emerald-950/30 border border-emerald-800/40 text-[11px] font-mono text-emerald-300">
+              <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-emerald-100 dark:bg-emerald-950/30 border border-emerald-300 dark:border-emerald-800/40 text-[11px] font-mono text-emerald-800 dark:text-emerald-300">
                 <span className="h-2 w-2 rounded-full bg-emerald-500" />
                 <span className="font-bold">MARKET OPEN</span>
               </div>
@@ -137,12 +142,12 @@ export default function HeaderNav({
             <button
               onClick={onToggleMarketMode}
               title="Toggle between Strict Real Market Hours (freezes on weekends) and 24/7 OTC Demo Practice"
-              className="flex items-center gap-1 px-2 py-1 rounded-lg bg-[#0F1626] border border-slate-700/80 hover:border-slate-600 text-[10px] font-mono text-slate-300 transition-colors"
+              className="flex items-center gap-1 px-2 py-1 rounded-lg bg-slate-100 dark:bg-[#0F1626] border border-slate-300 dark:border-slate-700/80 hover:border-slate-400 dark:hover:border-slate-600 text-[10px] font-mono text-slate-700 dark:text-slate-300 transition-colors"
             >
-              <Clock className="w-3 h-3 text-cyan-400" />
+              <Clock className="w-3 h-3 text-cyan-600 dark:text-cyan-400" />
               <span>
                 Mode:{' '}
-                <strong className={marketMode === 'WEEKEND_OTC_PRACTICE' ? 'text-cyan-400' : 'text-amber-400'}>
+                <strong className={marketMode === 'WEEKEND_OTC_PRACTICE' ? 'text-cyan-600 dark:text-cyan-400' : 'text-amber-600 dark:text-amber-400'}>
                   {marketMode === 'WEEKEND_OTC_PRACTICE' ? '24/7 OTC Demo' : 'Real Hours'}
                 </strong>
               </span>
@@ -153,44 +158,44 @@ export default function HeaderNav({
         {/* Telemetry & Action Strip */}
         <div className="flex items-center gap-2.5 overflow-x-auto pb-0.5 xl:pb-0">
           {/* Exness Telemetry Bar */}
-          <div className="flex items-center gap-2.5 bg-[#0A0E18] px-3 py-1.5 rounded-lg border border-slate-800 text-xs font-mono">
+          <div className="flex items-center gap-2.5 bg-slate-50 dark:bg-[#0A0E18] px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 text-xs font-mono">
             <div>
               <span className="text-[9px] text-slate-500 uppercase tracking-wider block">Balance</span>
-              <span className="font-bold text-slate-200">
+              <span className="font-bold text-slate-900 dark:text-slate-200">
                 ${account.balance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </span>
             </div>
 
-            <div className="h-4 w-px bg-slate-800" />
+            <div className="h-4 w-px bg-slate-300 dark:bg-slate-800" />
 
             <div>
               <span className="text-[9px] text-slate-500 uppercase tracking-wider block">Equity</span>
-              <span className="font-bold text-cyan-400">
+              <span className="font-bold text-cyan-600 dark:text-cyan-400">
                 ${account.equity.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </span>
             </div>
 
-            <div className="h-4 w-px bg-slate-800" />
+            <div className="h-4 w-px bg-slate-300 dark:bg-slate-800" />
 
             <div>
               <span className="text-[9px] text-slate-500 uppercase tracking-wider block">P&L</span>
-              <span className={`font-bold ${pnlIsPositive ? 'text-emerald-400' : 'text-rose-400'}`}>
+              <span className={`font-bold ${pnlIsPositive ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
                 {pnlIsPositive ? '+' : ''}${account.unrealizedPnL.toFixed(2)}
               </span>
             </div>
 
-            <div className="h-4 w-px bg-slate-800 hidden 2xl:block" />
+            <div className="h-4 w-px bg-slate-300 dark:bg-slate-800 hidden 2xl:block" />
 
             <div className="hidden 2xl:block">
               <span className="text-[9px] text-slate-500 uppercase tracking-wider block">Free Margin</span>
-              <span className="text-slate-300">${account.freeMargin.toFixed(2)}</span>
+              <span className="text-slate-700 dark:text-slate-300">${account.freeMargin.toFixed(2)}</span>
             </div>
 
-            <div className="h-4 w-px bg-slate-800 hidden 2xl:block" />
+            <div className="h-4 w-px bg-slate-300 dark:bg-slate-800 hidden 2xl:block" />
 
             <div className="hidden 2xl:block">
               <span className="text-[9px] text-slate-500 uppercase tracking-wider block">Leverage</span>
-              <span className="text-amber-400 font-bold">1:{account.leverage}</span>
+              <span className="text-amber-600 dark:text-amber-400 font-bold">1:{account.leverage}</span>
             </div>
           </div>
 
@@ -200,7 +205,7 @@ export default function HeaderNav({
               onClick={onTriggerTestSignal}
               disabled={isSimulatingSignal}
               title="Simulate TradingView Webhook alert"
-              className="flex items-center gap-1 px-2.5 py-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 rounded-lg text-xs font-semibold transition-all disabled:opacity-50 font-mono"
+              className="flex items-center gap-1 px-2.5 py-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-500/30 rounded-lg text-xs font-semibold transition-all disabled:opacity-50 font-mono"
             >
               <Zap className={`w-3.5 h-3.5 ${isSimulatingSignal ? 'animate-bounce' : ''}`} />
               <span className="hidden sm:inline">Simulate Alert</span>
@@ -208,15 +213,34 @@ export default function HeaderNav({
 
             <button
               onClick={onOpenPineScript}
-              className="flex items-center gap-1 px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-lg text-xs font-semibold transition-all"
+              className="flex items-center gap-1 px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-slate-700 rounded-lg text-xs font-semibold transition-all"
             >
-              <Code2 className="w-3.5 h-3.5 text-cyan-400" />
+              <Code2 className="w-3.5 h-3.5 text-cyan-600 dark:text-cyan-400" />
               <span className="hidden sm:inline">Pine Script</span>
+            </button>
+
+            {/* Light / Dark Mode Toggle */}
+            <button
+              onClick={onToggleTheme}
+              title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-slate-700 rounded-lg text-xs font-semibold transition-all font-mono"
+            >
+              {theme === 'dark' ? (
+                <>
+                  <Sun className="w-3.5 h-3.5 text-amber-400" />
+                  <span className="hidden sm:inline text-[11px]">Light</span>
+                </>
+              ) : (
+                <>
+                  <Moon className="w-3.5 h-3.5 text-cyan-600" />
+                  <span className="hidden sm:inline text-[11px]">Dark</span>
+                </>
+              )}
             </button>
 
             <button
               onClick={onOpenSettings}
-              className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 rounded-lg transition-all"
+              className="p-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white border border-slate-300 dark:border-slate-700 rounded-lg transition-all"
               title="Exness Credentials & Settings"
             >
               <Settings className="w-4 h-4" />

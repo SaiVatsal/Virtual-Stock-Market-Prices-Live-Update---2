@@ -185,6 +185,16 @@ export interface RiskCoachReport {
   coachAdvice: string[];
 }
 
+export type MarketSessionStatus = 'OPEN' | 'CLOSED_WEEKEND' | 'HOLIDAY';
+
+export interface MarketScheduleInfo {
+  status: MarketSessionStatus;
+  isForexOpen: boolean;
+  isCryptoOpen: boolean;
+  nextOpenTime: string;
+  serverTimeGMT: string;
+}
+
 export interface AppSettings {
   anthropicApiKey?: string;
   oandaApiKey?: string;
@@ -193,4 +203,10 @@ export interface AppSettings {
   webhookSecret?: string;
   initialBalance: number;
   leverage: number;
+  // Exness configuration
+  exnessAccountId?: string;
+  exnessServer?: string;
+  exnessPassword?: string;
+  exnessAccountType?: 'PRO' | 'RAW_SPREAD' | 'STANDARD' | 'ZERO';
+  marketMode?: 'REAL_MARKET_HOURS' | 'WEEKEND_OTC_PRACTICE';
 }
