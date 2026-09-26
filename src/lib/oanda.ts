@@ -1,6 +1,6 @@
 import { SymbolId, PriceQuote } from './types';
 import { getStore } from './store';
-import { parseOandaPricingResponse, executeTickCycle } from './tick-engine';
+import { parseOandaPricingResponse, executeTickCycle, syncRealWorldPrices } from './tick-engine';
 import { updateMarketPrices } from './market-engine';
 
 const OANDA_PRACTICE_BASE_URL = 'https://api-fxpractice.oanda.com';
@@ -86,7 +86,7 @@ export async function fetchTwelveDataPrices(): Promise<boolean> {
 }
 
 /**
- * Single cycle update: tries OANDA first, then Twelve Data, then local tick engine
+ * Single cycle update: tries OANDA first, then Twelve Data, then syncRealWorldPrices, then local tick engine
  */
 export async function refreshLiveMarket(): Promise<void> {
   const oandaSuccess = await fetchOandaPrices();
@@ -94,6 +94,10 @@ export async function refreshLiveMarket(): Promise<void> {
 
   const twelveSuccess = await fetchTwelveDataPrices();
   if (twelveSuccess) return;
+
+  // Try live real-world crypto/gold feed sync
+  const synced = await syncRealWorldPrices();
+  if (synced) return;
 
   // Fallback to high-fidelity tick engine
   executeTickCycle();

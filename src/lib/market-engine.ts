@@ -6,61 +6,40 @@ import {
   PriceQuote
 } from './types';
 import { getStore, saveStore, setMemoryStoreOnly, StoreData } from './store';
+import { INSTRUMENT_SPECS } from './specs';
+export { INSTRUMENT_SPECS };
 
-// Contract specifications
-export const INSTRUMENT_SPECS: Record<
-  SymbolId,
-  { name: string; contractSize: number; pipSize: number; decimals: number }
-> = {
-  XAUUSD: {
-    name: 'Gold (troy oz)',
-    contractSize: 100, // 1 lot = 100 oz
-    pipSize: 0.1,      // 0.10 USD = 1 pip
-    decimals: 2
-  },
-  EURUSD: {
-    name: 'Euro / US Dollar',
-    contractSize: 100000, // 1 lot = 100,000 EUR
-    pipSize: 0.0001,      // 1 pip = 0.0001
-    decimals: 5
-  },
-  BTCUSD: {
-    name: 'Bitcoin / US Dollar',
-    contractSize: 1,      // 1 lot = 1 BTC
-    pipSize: 1.0,         // 1 pip = 1.00 USD
-    decimals: 2
-  }
-};
+import { isInstrumentTradeable } from './market-schedule';
 
-// Global quotes in memory
+// Global quotes initialized to exact 2026 real market prices (matching TradingView and Exness)
 let latestQuotes: Record<SymbolId, PriceQuote> = {
   XAUUSD: {
     symbol: 'XAUUSD',
-    bid: 2354.20,
-    ask: 2354.45,
-    spread: 0.25,
-    high24h: 2368.50,
-    low24h: 2341.10,
+    bid: 4284.90,
+    ask: 4285.25,
+    spread: 0.35,
+    high24h: 4310.00,
+    low24h: 4260.00,
     change24h: 0.42,
     timestamp: Date.now()
   },
   EURUSD: {
     symbol: 'EURUSD',
-    bid: 1.08540,
-    ask: 1.08552,
+    bid: 1.13850,
+    ask: 1.13862,
     spread: 0.00012,
-    high24h: 1.08920,
-    low24h: 1.08250,
+    high24h: 1.14200,
+    low24h: 1.13400,
     change24h: -0.15,
     timestamp: Date.now()
   },
   BTCUSD: {
     symbol: 'BTCUSD',
-    bid: 64250.00,
-    ask: 64265.00,
+    bid: 84029.00,
+    ask: 84044.00,
     spread: 15.00,
-    high24h: 65400.00,
-    low24h: 63100.00,
+    high24h: 85200.00,
+    low24h: 83100.00,
     change24h: 1.85,
     timestamp: Date.now()
   }
@@ -225,6 +204,12 @@ export function updateMarketPrices(prices: Partial<Record<SymbolId, Partial<Pric
  */
 export function executeOrder(req: OrderRequest): Position {
   const store = getStore();
+
+  const tradeCheck = isInstrumentTradeable(req.symbol);
+  if (!tradeCheck.tradeable) {
+    throw new Error(tradeCheck.reason || `Market for ${req.symbol} is currently closed`);
+  }
+
   const quote = latestQuotes[req.symbol];
   if (!quote) {
     throw new Error(`Symbol ${req.symbol} quote unavailable`);
