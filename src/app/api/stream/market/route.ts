@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { getLatestQuotes, getAccountState, getPositions } from '@/lib/market-engine';
+import { getLatestQuotes, getAccountState, getPositions, getTradeHistory } from '@/lib/market-engine';
 import { refreshLiveMarket } from '@/lib/oanda';
 
 export const dynamic = 'force-dynamic';
@@ -18,6 +18,7 @@ export async function GET(req: NextRequest) {
           quotes: getLatestQuotes(),
           account: getAccountState(),
           positions: getPositions(),
+          history: getTradeHistory(),
           timestamp: Date.now()
         });
         controller.enqueue(encoder.encode(`data: ${initialData}\n\n`));
@@ -41,6 +42,7 @@ export async function GET(req: NextRequest) {
             quotes: getLatestQuotes(),
             account: getAccountState(),
             positions: getPositions(),
+            history: getTradeHistory(),
             timestamp: Date.now()
           });
 

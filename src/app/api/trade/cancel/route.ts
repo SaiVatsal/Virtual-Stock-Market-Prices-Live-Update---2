@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { cancelOrder, getPositions, getAccountState, getLatestQuotes } from '@/lib/market-engine';
+import { cancelOrder, getPositions, getAccountState, getLatestQuotes, getTradeHistory } from '@/lib/market-engine';
 
 export async function POST(req: NextRequest) {
   try {
@@ -18,6 +18,7 @@ export async function POST(req: NextRequest) {
       positions: getPositions(),
       account: getAccountState(),
       quotes: getLatestQuotes(),
+      history: getTradeHistory(),
       message: `Order ${orderId} cancelled successfully`
     });
   } catch (err: any) {

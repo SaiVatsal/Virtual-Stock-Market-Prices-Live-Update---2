@@ -147,20 +147,38 @@ export default function TradingTerminalPage() {
     }
   }, []);
 
+  // Hydrate trade history from localStorage cache on mount
+  useEffect(() => {
+    try {
+      const cached = localStorage.getItem('nexus_trade_history');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setHistory(parsed);
+        }
+      }
+    } catch {}
+  }, []);
+
   // Fetch closed trade history
   const fetchHistory = useCallback(async () => {
     try {
       const res = await fetch('/api/journal');
       if (res.ok) {
         const data = await res.json();
-        if (data.history) setHistory(data.history);
+        if (Array.isArray(data.history)) {
+          setHistory(data.history);
+          try {
+            localStorage.setItem('nexus_trade_history', JSON.stringify(data.history));
+          } catch {}
+        }
       }
     } catch (err) {
       console.error('Error fetching trade history:', err);
     }
   }, []);
 
-  // Instant Full Snapshot Fetcher (immediate quotes, positions, account)
+  // Instant Full Snapshot Fetcher (immediate quotes, positions, account, and history)
   const fetchSnapshot = useCallback(async () => {
     try {
       const res = await fetch('/api/trade/order');
@@ -169,6 +187,12 @@ export default function TradingTerminalPage() {
         if (data.quotes) setQuotes(data.quotes);
         if (data.account) setAccount(data.account);
         if (data.positions) setPositions(data.positions);
+        if (Array.isArray(data.history)) {
+          setHistory(data.history);
+          try {
+            localStorage.setItem('nexus_trade_history', JSON.stringify(data.history));
+          } catch {}
+        }
       }
     } catch (e) {
       console.error('Failed to fetch market snapshot:', e);
@@ -189,6 +213,12 @@ export default function TradingTerminalPage() {
           if (data.quotes) setQuotes(data.quotes);
           if (data.account) setAccount(data.account);
           if (data.positions) setPositions(data.positions);
+          if (Array.isArray(data.history)) {
+            setHistory(data.history);
+            try {
+              localStorage.setItem('nexus_trade_history', JSON.stringify(data.history));
+            } catch {}
+          }
         } catch (e) {
           console.error('Failed to parse SSE tick:', e);
         }
@@ -289,6 +319,11 @@ export default function TradingTerminalPage() {
     fetchMarketStatus();
   };
 
+  const handleOpenStatement = async () => {
+    await fetchHistory();
+    setIsStatementOpen(true);
+  };
+
   return (
     <div className="flex flex-col min-h-screen bg-slate-100 dark:bg-[#05080E] text-slate-900 dark:text-slate-100 transition-colors">
       {/* Exness Top Navigation & Telemetry */}
@@ -299,7 +334,7 @@ export default function TradingTerminalPage() {
         onSelectSymbol={setSelectedSymbol}
         onOpenSettings={() => setIsSettingsOpen(true)}
         onOpenPineScript={() => setIsPineScriptOpen(true)}
-        onOpenStatement={() => setIsStatementOpen(true)}
+        onOpenStatement={handleOpenStatement}
         onTriggerTestSignal={handleTriggerTestSignal}
         isSimulatingSignal={isSimulatingSignal}
         marketSchedule={marketSchedule}
@@ -353,7 +388,7 @@ export default function TradingTerminalPage() {
             onRefreshHistory={handleRefreshAll}
             onTriggerTestSignal={handleTriggerTestSignal}
             isSimulatingSignal={isSimulatingSignal}
-            onOpenStatement={() => setIsStatementOpen(true)}
+            onOpenStatement={handleOpenStatement}
           />
         </div>
       </main>

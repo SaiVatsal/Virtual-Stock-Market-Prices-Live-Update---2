@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { executeOrder, getPositions, getAccountState, getLatestQuotes } from '@/lib/market-engine';
+import { executeOrder, getPositions, getAccountState, getLatestQuotes, getTradeHistory } from '@/lib/market-engine';
 import { OrderRequest } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
@@ -10,6 +10,7 @@ export async function GET() {
     positions: getPositions(),
     account: getAccountState(),
     quotes: getLatestQuotes(),
+    history: getTradeHistory(),
     timestamp: Date.now()
   });
 }
@@ -40,6 +41,7 @@ export async function POST(req: NextRequest) {
       positions: getPositions(),
       account: getAccountState(),
       quotes: getLatestQuotes(),
+      history: getTradeHistory(),
       message: `Filled ${body.side} ${body.lots} lots on ${body.symbol} at $${position.entryPrice.toFixed(2)}`
     });
   } catch (err: any) {

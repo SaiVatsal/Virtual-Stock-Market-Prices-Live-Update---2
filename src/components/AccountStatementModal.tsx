@@ -30,12 +30,49 @@ interface AccountStatementModalProps {
 export default function AccountStatementModal({
   isOpen,
   onClose,
-  history,
+  history: propHistory,
   account,
   exnessAccount
 }: AccountStatementModalProps) {
+  const [fetchedHistory, setFetchedHistory] = React.useState<Position[]>([]);
+
+  React.useEffect(() => {
+    if (!isOpen) return;
+
+    // Check localStorage cache first
+    try {
+      const cached = localStorage.getItem('nexus_trade_history');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setFetchedHistory(parsed);
+        }
+      }
+    } catch {}
+
+    // Fetch live from server
+    const loadJournal = async () => {
+      try {
+        const res = await fetch('/api/journal');
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data.history) && data.history.length > 0) {
+            setFetchedHistory(data.history);
+            try {
+              localStorage.setItem('nexus_trade_history', JSON.stringify(data.history));
+            } catch {}
+          }
+        }
+      } catch (err) {
+        console.error('Failed to load trade history for statement:', err);
+      }
+    };
+    loadJournal();
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
+  const history = propHistory && propHistory.length > 0 ? propHistory : fetchedHistory;
   const initialBalance = 100000;
   const report = calculatePerformanceReport(history, initialBalance, account.unrealizedPnL);
 
