@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { modifyPosition } from '@/lib/market-engine';
+import { modifyPosition, getPositions, getAccountState, getLatestQuotes } from '@/lib/market-engine';
 
 export async function POST(req: NextRequest) {
   try {
@@ -19,6 +19,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       success: true,
       position: updated,
+      positions: getPositions(),
+      account: getAccountState(),
+      quotes: getLatestQuotes(),
       message: `Updated order ${positionId} parameters`
     });
   } catch (err: any) {

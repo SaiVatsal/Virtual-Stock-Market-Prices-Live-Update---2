@@ -46,8 +46,8 @@ export default function OrderTicket({
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   const spec = INSTRUMENT_SPECS[symbol];
-  const currentBid = quote?.bid || (symbol === 'XAUUSD' ? 4284.90 : symbol === 'EURUSD' ? 1.13850 : 84029.00);
-  const currentAsk = quote?.ask || (symbol === 'XAUUSD' ? 4285.25 : symbol === 'EURUSD' ? 1.13862 : 84044.00);
+  const currentBid = quote?.bid || (symbol === 'XAUUSD' ? 4118.20 : symbol === 'EURUSD' ? 1.12510 : 83480.00);
+  const currentAsk = quote?.ask || (symbol === 'XAUUSD' ? 4118.55 : symbol === 'EURUSD' ? 1.12522 : 83495.00);
 
   // Compute required margin with leverage
   const contractSize = spec?.contractSize || 100;

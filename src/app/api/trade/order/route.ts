@@ -1,6 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { executeOrder } from '@/lib/market-engine';
+import { executeOrder, getPositions, getAccountState, getLatestQuotes } from '@/lib/market-engine';
 import { OrderRequest } from '@/lib/types';
+
+export const dynamic = 'force-dynamic';
+
+export async function GET() {
+  return NextResponse.json({
+    success: true,
+    positions: getPositions(),
+    account: getAccountState(),
+    quotes: getLatestQuotes(),
+    timestamp: Date.now()
+  });
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -25,7 +37,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       success: true,
       position,
-      message: `Opened ${body.side} ${body.lots} lots on ${body.symbol} at ${position.entryPrice}`
+      positions: getPositions(),
+      account: getAccountState(),
+      quotes: getLatestQuotes(),
+      message: `Filled ${body.side} ${body.lots} lots on ${body.symbol} at $${position.entryPrice.toFixed(2)}`
     });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 400 });

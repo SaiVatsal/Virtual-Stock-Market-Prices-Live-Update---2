@@ -23,6 +23,10 @@ interface ChartTradingOverlayProps {
   quote?: PriceQuote;
   positions: Position[];
   theme?: 'dark' | 'light';
+  interactionMode?: 'TRADE' | 'PAN';
+  onInteractionModeChange?: (mode: 'TRADE' | 'PAN') => void;
+  verticalScale?: number;
+  onVerticalScaleChange?: (scale: number) => void;
   onOrderPlaced?: () => void;
   onPositionModified?: () => void;
   onPositionClosed?: () => void;
@@ -50,6 +54,10 @@ export default function ChartTradingOverlay({
   quote,
   positions,
   theme = 'dark',
+  interactionMode: propInteractionMode,
+  onInteractionModeChange,
+  verticalScale: propVerticalScale,
+  onVerticalScaleChange,
   onOrderPlaced,
   onPositionModified,
   onPositionClosed
@@ -57,8 +65,14 @@ export default function ChartTradingOverlay({
   const overlayRef = useRef<HTMLDivElement>(null);
   const isDark = theme === 'dark';
 
-  // Interaction Mode: 'TRADE' (Default: drag SL/TP, right-click menu) or 'PAN' (TradingView native mouse interactions)
-  const [interactionMode, setInteractionMode] = useState<'TRADE' | 'PAN'>('TRADE');
+  // Interaction Mode: 'TRADE' (drag SL/TP, right-click menu) or 'PAN' (TradingView native mouse interactions)
+  const [localInteractionMode, setLocalInteractionMode] = useState<'TRADE' | 'PAN'>('TRADE');
+  const interactionMode = propInteractionMode ?? localInteractionMode;
+  const setInteractionMode = (val: 'TRADE' | 'PAN' | ((prev: 'TRADE' | 'PAN') => 'TRADE' | 'PAN')) => {
+    const nextVal = typeof val === 'function' ? val(interactionMode) : val;
+    if (onInteractionModeChange) onInteractionModeChange(nextVal);
+    else setLocalInteractionMode(nextVal);
+  };
 
   // Dragging state for SL / TP / Pending order lines
   const [dragState, setDragState] = useState<DragState | null>(null);
@@ -79,18 +93,27 @@ export default function ChartTradingOverlay({
     setTimeout(() => setToastMessage(null), 3500);
   };
 
+  const [localVerticalScale, setLocalVerticalScale] = useState<number>(1.0);
+  const verticalScale = propVerticalScale ?? localVerticalScale;
+  const setVerticalScale = (val: number | ((prev: number) => number)) => {
+    const nextVal = typeof val === 'function' ? val(verticalScale) : val;
+    if (onVerticalScaleChange) onVerticalScaleChange(nextVal);
+    else setLocalVerticalScale(nextVal);
+  };
+
   const spec = INSTRUMENT_SPECS[symbol] || { contractSize: 100, pipSize: 0.1, decimals: 2 };
-  const currentBid = quote?.bid || (symbol === 'XAUUSD' ? 4284.90 : symbol === 'EURUSD' ? 1.13850 : 84029.00);
-  const currentAsk = quote?.ask || (symbol === 'XAUUSD' ? 4285.25 : symbol === 'EURUSD' ? 1.13862 : 84044.00);
+  const currentBid = quote?.bid || (symbol === 'XAUUSD' ? 4118.20 : symbol === 'EURUSD' ? 1.12510 : 83480.00);
+  const currentAsk = quote?.ask || (symbol === 'XAUUSD' ? 4118.55 : symbol === 'EURUSD' ? 1.12522 : 83495.00);
   const midPrice = (currentBid + currentAsk) / 2;
 
-  // Coordinate mapping functions
+  // Coordinate mapping functions with zoom scale support
   const getPriceRange = useCallback(() => {
-    const rangePct = symbol === 'EURUSD' ? 0.008 : symbol === 'XAUUSD' ? 0.018 : 0.025;
+    const baseRangePct = symbol === 'EURUSD' ? 0.008 : symbol === 'XAUUSD' ? 0.018 : 0.025;
+    const rangePct = baseRangePct * verticalScale;
     const pHigh = midPrice * (1 + rangePct);
     const pLow = midPrice * (1 - rangePct);
     return { pHigh, pLow, pSpan: pHigh - pLow };
-  }, [symbol, midPrice]);
+  }, [symbol, midPrice, verticalScale]);
 
   const getPriceFromY = useCallback(
     (pixelY: number, containerHeight: number): number => {
@@ -409,41 +432,7 @@ export default function ChartTradingOverlay({
         interactionMode === 'TRADE' ? 'pointer-events-auto' : 'pointer-events-none'
       }`}
     >
-      {/* Top Banner Control: Toggle between Exness Drag/Right-Click Mode vs TradingView Pan Mode */}
-      <div className="absolute top-2 left-2 z-30 flex items-center gap-1.5 pointer-events-auto">
-        <button
-          onClick={() => setInteractionMode((m) => (m === 'TRADE' ? 'PAN' : 'TRADE'))}
-          title={
-            interactionMode === 'TRADE'
-              ? 'Trading Overlay Active: Drag SL/TP & Right-Click enabled. Click to switch to Pan Chart mode.'
-              : 'Pan Chart Active: TradingView mouse interactions enabled. Click to switch to Exness Trading mode.'
-          }
-          className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-mono font-bold shadow-md transition-all ${
-            interactionMode === 'TRADE'
-              ? 'bg-emerald-600/90 hover:bg-emerald-500 text-white border border-emerald-400/50 backdrop-blur-sm'
-              : 'bg-slate-800/90 hover:bg-slate-700 text-slate-300 border border-slate-600 backdrop-blur-sm'
-          }`}
-        >
-          {interactionMode === 'TRADE' ? (
-            <>
-              <Crosshair className="w-3.5 h-3.5 text-emerald-200 animate-spin-slow" />
-              <span>Exness Trade on Chart: Active</span>
-            </>
-          ) : (
-            <>
-              <MousePointer className="w-3.5 h-3.5 text-amber-400" />
-              <span>Pan Chart Mode (TV Focus)</span>
-            </>
-          )}
-        </button>
 
-        {/* Quick Hint Tag */}
-        {interactionMode === 'TRADE' && (
-          <span className="hidden sm:inline-block px-2 py-0.5 rounded text-[10px] font-mono text-slate-300 bg-black/60 backdrop-blur-sm border border-slate-700/60">
-            Right-click chart to trade • Drag SL/TP lines
-          </span>
-        )}
-      </div>
 
       {/* Floating Action Toast Notification */}
       {toastMessage && (
@@ -467,143 +456,264 @@ export default function ChartTradingOverlay({
           const slPrice = pos.stopLoss;
           const slY = slPrice ? getYFromPrice(slPrice, containerHeight) : null;
 
+          const projectedTpProfit = tpPrice
+            ? pos.side === 'BUY'
+              ? (tpPrice - pos.entryPrice) * pos.units
+              : (pos.entryPrice - tpPrice) * pos.units
+            : 0;
+          const projectedTpPips = tpPrice
+            ? Math.abs(tpPrice - pos.entryPrice) / spec.pipSize
+            : 0;
+
+          const projectedSlLoss = slPrice
+            ? pos.side === 'BUY'
+              ? (pos.entryPrice - slPrice) * pos.units
+              : (slPrice - pos.entryPrice) * pos.units
+            : 0;
+          const projectedSlPips = slPrice
+            ? Math.abs(pos.entryPrice - slPrice) / spec.pipSize
+            : 0;
+
           return (
             <React.Fragment key={pos.id}>
+              {/* Shaded Take Profit Bracket Zone (Green) */}
+              {!isPending && tpY !== null && (
+                <div
+                  style={{
+                    top: `${Math.min(entryY, tpY)}px`,
+                    height: `${Math.max(2, Math.abs(entryY - tpY))}px`
+                  }}
+                  className="absolute left-0 right-16 pointer-events-none z-5 bg-emerald-500/[0.08] border-l-2 border-emerald-500/50 flex items-center pl-3"
+                >
+                  <span className="text-[9px] font-mono font-bold text-emerald-400/80 tracking-wider uppercase">
+                    Target Profit Zone • +${projectedTpProfit.toFixed(2)} ({projectedTpPips.toFixed(1)} pips)
+                  </span>
+                </div>
+              )}
+
+              {/* Shaded Stop Loss Bracket Zone (Red) */}
+              {!isPending && slY !== null && (
+                <div
+                  style={{
+                    top: `${Math.min(entryY, slY)}px`,
+                    height: `${Math.max(2, Math.abs(entryY - slY))}px`
+                  }}
+                  className="absolute left-0 right-16 pointer-events-none z-5 bg-rose-500/[0.08] border-l-2 border-rose-500/50 flex items-center pl-3"
+                >
+                  <span className="text-[9px] font-mono font-bold text-rose-400/80 tracking-wider uppercase">
+                    Stop Risk Zone • -${projectedSlLoss.toFixed(2)} ({projectedSlPips.toFixed(1)} pips)
+                  </span>
+                </div>
+              )}
+
               {/* 1. Position Entry Line / Pending Order Line */}
               <div
                 style={{ top: `${entryY}px` }}
-                className={`absolute left-0 right-0 h-[1px] flex items-center z-10 pointer-events-auto transition-opacity ${
-                  isPending
-                    ? 'border-t-2 border-dashed border-amber-400 dark:border-amber-400/90'
-                    : pos.side === 'BUY'
-                    ? 'border-t-2 border-dashed border-cyan-400 dark:border-cyan-400/90'
-                    : 'border-t-2 border-dashed border-rose-400 dark:border-rose-400/90'
-                }`}
+                className="absolute left-0 right-0 h-[2px] flex items-center z-20 pointer-events-auto"
               >
-                {/* Left Tag: Order Details */}
+                {/* Solid Glowing Line Body */}
                 <div
-                  className={`absolute left-3 -translate-y-1/2 flex items-center gap-1.5 px-2 py-0.5 rounded shadow-lg text-[10px] font-mono font-bold border backdrop-blur-md ${
+                  className={`absolute inset-x-0 h-[2px] ${
                     isPending
-                      ? 'bg-amber-950/90 text-amber-300 border-amber-500/60'
+                      ? 'bg-gradient-to-r from-amber-400 via-amber-300 to-amber-400 shadow-[0_0_8px_rgba(245,158,11,0.9)]'
                       : pos.side === 'BUY'
-                      ? 'bg-cyan-950/90 text-cyan-300 border-cyan-500/60'
-                      : 'bg-rose-950/90 text-rose-300 border-rose-500/60'
+                      ? 'bg-gradient-to-r from-emerald-500 via-emerald-400 to-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.9)]'
+                      : 'bg-gradient-to-r from-rose-500 via-rose-400 to-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.9)]'
+                  }`}
+                />
+
+                {/* Left Institutional HUD Capsule */}
+                <div
+                  className={`absolute left-2 -translate-y-1/2 flex items-center gap-1.5 px-2.5 py-1 rounded-md shadow-2xl text-[11px] font-mono font-bold border backdrop-blur-md z-30 ${
+                    isPending
+                      ? 'bg-slate-950/95 text-amber-300 border-amber-500/80 shadow-[0_0_15px_rgba(245,158,11,0.3)]'
+                      : pos.side === 'BUY'
+                      ? 'bg-slate-950/95 text-emerald-300 border-emerald-500/80 shadow-[0_0_15px_rgba(16,185,129,0.3)]'
+                      : 'bg-slate-950/95 text-rose-300 border-rose-500/80 shadow-[0_0_15px_rgba(244,63,94,0.3)]'
                   }`}
                 >
-                  <span className="flex items-center gap-0.5">
+                  {/* Side & Lots Pill */}
+                  <span
+                    className={`px-1.5 py-0.5 rounded text-[10px] font-black flex items-center gap-0.5 ${
+                      isPending
+                        ? 'bg-amber-500 text-slate-950'
+                        : pos.side === 'BUY'
+                        ? 'bg-emerald-500 text-slate-950'
+                        : 'bg-rose-600 text-white'
+                    }`}
+                  >
                     {pos.side === 'BUY' ? (
-                      <ArrowUp className="w-2.5 h-2.5 text-emerald-400 stroke-[3]" />
+                      <ArrowUp className="w-2.5 h-2.5 stroke-[3]" />
                     ) : (
-                      <ArrowDown className="w-2.5 h-2.5 text-rose-400 stroke-[3]" />
+                      <ArrowDown className="w-2.5 h-2.5 stroke-[3]" />
                     )}
-                    {isPending ? `${pos.side} ${pos.type}` : pos.side} {pos.lots} lots
+                    {isPending ? `${pos.side} ${pos.type}` : pos.side} {pos.lots}L
                   </span>
-                  <span className="opacity-80">@{pos.entryPrice.toFixed(spec.decimals)}</span>
 
+                  {/* Entry Price */}
+                  <span className="text-white font-extrabold tracking-wide">
+                    @${pos.entryPrice.toFixed(spec.decimals)}
+                  </span>
+
+                  {/* Live Profit/Loss Pill */}
                   {!isPending && (
                     <span
-                      className={`ml-1 font-extrabold ${
-                        isWinner ? 'text-emerald-400' : 'text-rose-400'
+                      className={`px-1.5 py-0.5 rounded text-[10px] font-black tracking-tight ${
+                        isWinner
+                          ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40'
+                          : 'bg-rose-500/20 text-rose-400 border border-rose-500/40'
                       }`}
                     >
-                      {isWinner ? '+' : ''}${pos.profit.toFixed(2)}
+                      {isWinner ? '+' : ''}${pos.profit.toFixed(2)} ({pos.profitPips >= 0 ? '+' : ''}{pos.profitPips.toFixed(1)}p)
                     </span>
                   )}
+
+                  {/* Quick Actions in Badge */}
+                  <div className="flex items-center gap-1 ml-1 pl-1 border-l border-slate-700/80">
+                    {/* Pending Move Drag Handle */}
+                    {isPending && (
+                      <div
+                        onMouseDown={(e) => handleStartDragPending(e, pos)}
+                        title="Drag up/down to adjust Pending Order price"
+                        className="flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-[10px] cursor-ns-resize shadow-md"
+                      >
+                        <GripVertical className="w-2.5 h-2.5 stroke-[3]" />
+                        <span>Move</span>
+                      </div>
+                    )}
+
+                    {/* Add TP Button */}
+                    {!isPending && !pos.takeProfit && (
+                      <button
+                        onClick={(e) => handleStartDragTP(e, pos)}
+                        title="Click or drag to attach Take Profit"
+                        className="px-1.5 py-0.5 rounded bg-emerald-950 hover:bg-emerald-800 text-emerald-300 border border-emerald-500/60 text-[10px] font-black transition-colors"
+                      >
+                        + TP
+                      </button>
+                    )}
+
+                    {/* Add SL Button */}
+                    {!isPending && !pos.stopLoss && (
+                      <button
+                        onClick={(e) => handleStartDragSL(e, pos)}
+                        title="Click or drag to attach Stop Loss"
+                        className="px-1.5 py-0.5 rounded bg-rose-950 hover:bg-rose-800 text-rose-300 border border-rose-500/60 text-[10px] font-black transition-colors"
+                      >
+                        + SL
+                      </button>
+                    )}
+
+                    {/* Close / Cancel Button */}
+                    <button
+                      onClick={(e) => handleCancelOrClose(e, pos)}
+                      title={isPending ? 'Cancel Pending Order' : 'Close Position at Market Price'}
+                      className="p-1 rounded bg-slate-800 hover:bg-rose-600 text-slate-300 hover:text-white transition-colors"
+                    >
+                      <X className="w-3 h-3 stroke-[3]" />
+                    </button>
+                  </div>
                 </div>
 
-                {/* Right Control Tag: Quick SL / TP buttons, Cancel/Close, and Drag Handle for Pending */}
-                <div className="absolute right-3 -translate-y-1/2 flex items-center gap-1">
-                  {/* If Pending Order: Drag Handle to Move Order Up/Down */}
-                  {isPending && (
-                    <div
-                      onMouseDown={(e) => handleStartDragPending(e, pos)}
-                      title="Drag to change Limit/Stop Order price"
-                      className="flex items-center gap-1 px-2 py-0.5 rounded bg-amber-500 hover:bg-amber-400 text-black font-mono font-extrabold text-[10px] cursor-ns-resize shadow-md"
-                    >
-                      <GripVertical className="w-3 h-3 stroke-[3]" />
-                      <span>LIMIT: ${pos.entryPrice.toFixed(spec.decimals)}</span>
-                    </div>
-                  )}
-
-                  {/* If Position has no TP: Add TP Button / Drag Trigger */}
-                  {!isPending && !pos.takeProfit && (
-                    <button
-                      onClick={(e) => handleStartDragTP(e, pos)}
-                      title="Drag or click to attach Take Profit"
-                      className="flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-emerald-950/90 hover:bg-emerald-800 text-emerald-300 border border-emerald-500/50 text-[10px] font-mono font-bold shadow-sm"
-                    >
-                      <Plus className="w-2.5 h-2.5" />
-                      <span>TP</span>
-                    </button>
-                  )}
-
-                  {/* If Position has no SL: Add SL Button / Drag Trigger */}
-                  {!isPending && !pos.stopLoss && (
-                    <button
-                      onClick={(e) => handleStartDragSL(e, pos)}
-                      title="Drag or click to attach Stop Loss"
-                      className="flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-rose-950/90 hover:bg-rose-800 text-rose-300 border border-rose-500/50 text-[10px] font-mono font-bold shadow-sm"
-                    >
-                      <Plus className="w-2.5 h-2.5" />
-                      <span>SL</span>
-                    </button>
-                  )}
-
-                  {/* Close / Cancel Button */}
-                  <button
-                    onClick={(e) => handleCancelOrClose(e, pos)}
-                    title={isPending ? 'Cancel Pending Order' : 'Close Position'}
-                    className="p-1 rounded bg-slate-900/90 hover:bg-rose-600 text-slate-400 hover:text-white border border-slate-700 shadow-sm transition-colors"
+                {/* Right Axis Price Chevron Badge */}
+                <div className="absolute right-0 -translate-y-1/2 flex items-center z-30 shadow-2xl">
+                  <div
+                    className={`w-0 h-0 border-y-[7px] border-y-transparent border-r-[7px] ${
+                      isPending
+                        ? 'border-r-amber-500'
+                        : pos.side === 'BUY'
+                        ? 'border-r-emerald-500'
+                        : 'border-r-rose-600'
+                    }`}
+                  />
+                  <div
+                    className={`px-2 py-0.5 rounded-r font-mono font-black text-[10px] tracking-tight ${
+                      isPending
+                        ? 'bg-amber-500 text-slate-950 border border-l-0 border-amber-400'
+                        : pos.side === 'BUY'
+                        ? 'bg-emerald-500 text-slate-950 border border-l-0 border-emerald-400'
+                        : 'bg-rose-600 text-white border border-l-0 border-rose-400'
+                    }`}
                   >
-                    <X className="w-3 h-3 stroke-[3]" />
-                  </button>
+                    {pos.side === 'BUY' ? '▲' : '▼'} ${pos.entryPrice.toFixed(spec.decimals)}
+                  </div>
                 </div>
               </div>
 
-              {/* 2. Take Profit (TP) Line: Bright Green with Drag Handle */}
+              {/* 2. Take Profit (TP) Line: Bright Green with Drag Handle & Axis Flag */}
               {tpY !== null && tpPrice && (
                 <div
                   style={{ top: `${tpY}px` }}
-                  className="absolute left-0 right-0 h-[1px] flex items-center z-15 pointer-events-auto border-t-2 border-dashed border-emerald-500 dark:border-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.3)]"
+                  className="absolute left-0 right-0 h-[2px] flex items-center z-20 pointer-events-auto border-t-2 border-dashed border-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.8)]"
                 >
+                  {/* Left TP Info Badge */}
+                  <div className="absolute left-2 -translate-y-1/2 flex items-center gap-1.5 px-2 py-0.5 rounded bg-emerald-950/95 border border-emerald-500/80 text-emerald-300 font-mono font-black text-[10px] shadow-xl backdrop-blur-md">
+                    <Target className="w-3 h-3 text-emerald-400" />
+                    <span>TP: +${projectedTpProfit.toFixed(2)} (+{projectedTpPips.toFixed(1)}p)</span>
+                  </div>
+
+                  {/* Right Draggable Handle */}
                   <div
                     onMouseDown={(e) => handleStartDragTP(e, pos)}
-                    title="Drag up/down to adjust Take Profit"
-                    className="absolute right-3 -translate-y-1/2 flex items-center gap-1.5 px-2 py-0.5 rounded bg-emerald-600 hover:bg-emerald-500 text-white font-mono font-bold text-[10px] cursor-ns-resize shadow-lg transition-transform hover:scale-105 active:scale-95"
+                    title="Drag up/down to adjust Take Profit price"
+                    className="absolute right-24 -translate-y-1/2 flex items-center gap-1 px-2 py-0.5 rounded bg-emerald-600 hover:bg-emerald-500 text-white font-mono font-black text-[10px] cursor-ns-resize shadow-xl transition-transform hover:scale-105 active:scale-95"
                   >
                     <GripVertical className="w-3 h-3 stroke-[3]" />
                     <span>TP: ${tpPrice.toFixed(spec.decimals)}</span>
                     <button
                       onClick={(e) => handleRemoveTP(e, pos.id)}
                       title="Remove Take Profit"
-                      className="ml-1 hover:text-rose-200"
+                      className="ml-0.5 hover:text-rose-200"
                     >
-                      <X className="w-2.5 h-2.5" />
+                      <X className="w-2.5 h-2.5 stroke-[3]" />
                     </button>
+                  </div>
+
+                  {/* Right Axis TP Scale Badge */}
+                  <div className="absolute right-0 -translate-y-1/2 flex items-center z-30 shadow-2xl">
+                    <div className="w-0 h-0 border-y-[7px] border-y-transparent border-r-[7px] border-r-emerald-600" />
+                    <div className="bg-emerald-600 text-white font-mono font-black text-[10px] px-2 py-0.5 rounded-r border border-l-0 border-emerald-400">
+                      TP: ${tpPrice.toFixed(spec.decimals)}
+                    </div>
                   </div>
                 </div>
               )}
 
-              {/* 3. Stop Loss (SL) Line: Bright Red with Drag Handle */}
+              {/* 3. Stop Loss (SL) Line: Bright Red with Drag Handle & Axis Flag */}
               {slY !== null && slPrice && (
                 <div
                   style={{ top: `${slY}px` }}
-                  className="absolute left-0 right-0 h-[1px] flex items-center z-15 pointer-events-auto border-t-2 border-dashed border-rose-500 dark:border-rose-400 shadow-[0_0_8px_rgba(239,68,68,0.3)]"
+                  className="absolute left-0 right-0 h-[2px] flex items-center z-20 pointer-events-auto border-t-2 border-dashed border-rose-500 shadow-[0_0_10px_rgba(239,68,68,0.8)]"
                 >
+                  {/* Left SL Info Badge */}
+                  <div className="absolute left-2 -translate-y-1/2 flex items-center gap-1.5 px-2 py-0.5 rounded bg-rose-950/95 border border-rose-500/80 text-rose-300 font-mono font-black text-[10px] shadow-xl backdrop-blur-md">
+                    <ShieldAlert className="w-3 h-3 text-rose-400" />
+                    <span>SL: -${projectedSlLoss.toFixed(2)} (-{projectedSlPips.toFixed(1)}p)</span>
+                  </div>
+
+                  {/* Right Draggable Handle */}
                   <div
                     onMouseDown={(e) => handleStartDragSL(e, pos)}
-                    title="Drag up/down to adjust Stop Loss"
-                    className="absolute right-3 -translate-y-1/2 flex items-center gap-1.5 px-2 py-0.5 rounded bg-rose-600 hover:bg-rose-500 text-white font-mono font-bold text-[10px] cursor-ns-resize shadow-lg transition-transform hover:scale-105 active:scale-95"
+                    title="Drag up/down to adjust Stop Loss price"
+                    className="absolute right-24 -translate-y-1/2 flex items-center gap-1 px-2 py-0.5 rounded bg-rose-600 hover:bg-rose-500 text-white font-mono font-black text-[10px] cursor-ns-resize shadow-xl transition-transform hover:scale-105 active:scale-95"
                   >
                     <GripVertical className="w-3 h-3 stroke-[3]" />
                     <span>SL: ${slPrice.toFixed(spec.decimals)}</span>
                     <button
                       onClick={(e) => handleRemoveSL(e, pos.id)}
                       title="Remove Stop Loss"
-                      className="ml-1 hover:text-slate-200"
+                      className="ml-0.5 hover:text-slate-200"
                     >
-                      <X className="w-2.5 h-2.5" />
+                      <X className="w-2.5 h-2.5 stroke-[3]" />
                     </button>
+                  </div>
+
+                  {/* Right Axis SL Scale Badge */}
+                  <div className="absolute right-0 -translate-y-1/2 flex items-center z-30 shadow-2xl">
+                    <div className="w-0 h-0 border-y-[7px] border-y-transparent border-r-[7px] border-r-rose-600" />
+                    <div className="bg-rose-600 text-white font-mono font-black text-[10px] px-2 py-0.5 rounded-r border border-l-0 border-rose-400">
+                      SL: ${slPrice.toFixed(spec.decimals)}
+                    </div>
                   </div>
                 </div>
               )}

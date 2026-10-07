@@ -11,45 +11,48 @@ export { INSTRUMENT_SPECS };
 
 import { isInstrumentTradeable } from './market-schedule';
 
-// Global quotes initialized to exact 2026 real market prices (matching TradingView and Exness)
-let latestQuotes: Record<SymbolId, PriceQuote> = {
+// Global quotes initialized to exact real market prices (matching TradingView and Exness live candles)
+export const INITIAL_DEFAULT_QUOTES: Record<SymbolId, PriceQuote> = {
   XAUUSD: {
     symbol: 'XAUUSD',
-    bid: 4284.90,
-    ask: 4285.25,
+    bid: 4118.20,
+    ask: 4118.55,
     spread: 0.35,
-    high24h: 4310.00,
-    low24h: 4260.00,
-    change24h: 0.42,
+    high24h: 4140.00,
+    low24h: 4090.00,
+    change24h: 0.35,
     timestamp: Date.now()
   },
   EURUSD: {
     symbol: 'EURUSD',
-    bid: 1.13850,
-    ask: 1.13862,
+    bid: 1.12510,
+    ask: 1.12522,
     spread: 0.00012,
-    high24h: 1.14200,
-    low24h: 1.13400,
-    change24h: -0.15,
+    high24h: 1.12900,
+    low24h: 1.12100,
+    change24h: -0.10,
     timestamp: Date.now()
   },
   BTCUSD: {
     symbol: 'BTCUSD',
-    bid: 84029.00,
-    ask: 84044.00,
+    bid: 83480.00,
+    ask: 83495.00,
     spread: 15.00,
-    high24h: 85200.00,
-    low24h: 83100.00,
-    change24h: 1.85,
+    high24h: 84800.00,
+    low24h: 82500.00,
+    change24h: 1.25,
     timestamp: Date.now()
   }
 };
+
+let latestQuotes: Record<SymbolId, PriceQuote> = JSON.parse(JSON.stringify(INITIAL_DEFAULT_QUOTES));
 
 export function getLatestQuotes(): Record<SymbolId, PriceQuote> {
   return latestQuotes;
 }
 
 export function resetStoreForTest(initialBalance = 100000, leverage = 100): void {
+  latestQuotes = JSON.parse(JSON.stringify(INITIAL_DEFAULT_QUOTES));
   const fresh: StoreData = {
     account: {
       balance: initialBalance,

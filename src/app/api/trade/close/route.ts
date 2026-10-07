@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { closePosition } from '@/lib/market-engine';
+import { closePosition, getPositions, getAccountState, getLatestQuotes } from '@/lib/market-engine';
 import { generateTradeCritique } from '@/lib/claude';
 import { getStore, saveStore } from '@/lib/store';
 
@@ -32,6 +32,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       success: true,
       position: closedPosition,
+      positions: getPositions(),
+      account: getAccountState(),
+      quotes: getLatestQuotes(),
       message: `Position closed with ${closedPosition.profit >= 0 ? '+' : ''}$${closedPosition.profit.toFixed(2)} (${closedPosition.profitPips >= 0 ? '+' : ''}${closedPosition.profitPips.toFixed(1)} pips)`
     });
   } catch (err: any) {

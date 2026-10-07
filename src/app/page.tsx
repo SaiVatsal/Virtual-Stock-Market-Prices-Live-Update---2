@@ -32,32 +32,32 @@ const DEFAULT_ACCOUNT: AccountState = {
 const DEFAULT_QUOTES: Record<SymbolId, PriceQuote> = {
   XAUUSD: {
     symbol: 'XAUUSD',
-    bid: 4284.90,
-    ask: 4285.25,
+    bid: 4118.20,
+    ask: 4118.55,
     spread: 0.35,
-    high24h: 4310.00,
-    low24h: 4260.00,
-    change24h: 0.42,
+    high24h: 4140.00,
+    low24h: 4090.00,
+    change24h: 0.35,
     timestamp: Date.now()
   },
   EURUSD: {
     symbol: 'EURUSD',
-    bid: 1.13850,
-    ask: 1.13862,
+    bid: 1.12510,
+    ask: 1.12522,
     spread: 0.00012,
-    high24h: 1.14200,
-    low24h: 1.13400,
-    change24h: -0.15,
+    high24h: 1.12900,
+    low24h: 1.12100,
+    change24h: -0.10,
     timestamp: Date.now()
   },
   BTCUSD: {
     symbol: 'BTCUSD',
-    bid: 84029.00,
-    ask: 84044.00,
+    bid: 83480.00,
+    ask: 83495.00,
     spread: 15.00,
-    high24h: 85200.00,
-    low24h: 83100.00,
-    change24h: 1.85,
+    high24h: 84800.00,
+    low24h: 82500.00,
+    change24h: 1.25,
     timestamp: Date.now()
   }
 };
@@ -160,6 +160,21 @@ export default function TradingTerminalPage() {
     }
   }, []);
 
+  // Instant Full Snapshot Fetcher (immediate quotes, positions, account)
+  const fetchSnapshot = useCallback(async () => {
+    try {
+      const res = await fetch('/api/trade/order');
+      if (res.ok) {
+        const data = await res.json();
+        if (data.quotes) setQuotes(data.quotes);
+        if (data.account) setAccount(data.account);
+        if (data.positions) setPositions(data.positions);
+      }
+    } catch (e) {
+      console.error('Failed to fetch market snapshot:', e);
+    }
+  }, []);
+
   // Real-Time Server-Sent Events (SSE) Stream
   useEffect(() => {
     let eventSource: EventSource | null = null;
@@ -189,6 +204,8 @@ export default function TradingTerminalPage() {
       };
     };
 
+    // Immediate initial snapshot load followed by SSE stream
+    fetchSnapshot();
     connectSSE();
     fetchMarketStatus();
     fetchSignals();
@@ -198,7 +215,7 @@ export default function TradingTerminalPage() {
       if (eventSource) eventSource.close();
       clearTimeout(reconnectTimer);
     };
-  }, [fetchMarketStatus, fetchSignals, fetchHistory]);
+  }, [fetchSnapshot, fetchMarketStatus, fetchSignals, fetchHistory]);
 
   // Toggle between Real Market Hours (freezes weekends) vs 24/7 OTC Demo
   const handleToggleMarketMode = async () => {
@@ -239,7 +256,7 @@ export default function TradingTerminalPage() {
 
   const handleQuickTrade = async (side: 'BUY' | 'SELL') => {
     try {
-      await fetch('/api/trade/order', {
+      const res = await fetch('/api/trade/order', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -253,6 +270,12 @@ export default function TradingTerminalPage() {
           }
         })
       });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.positions) setPositions(data.positions);
+        if (data.account) setAccount(data.account);
+        if (data.quotes) setQuotes(data.quotes);
+      }
       handleRefreshAll();
     } catch (err) {
       console.error('Quick trade error:', err);
@@ -260,6 +283,7 @@ export default function TradingTerminalPage() {
   };
 
   const handleRefreshAll = () => {
+    fetchSnapshot();
     fetchHistory();
     fetchSignals();
     fetchMarketStatus();

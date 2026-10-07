@@ -40,8 +40,8 @@ describe('Exness Platform Backend Service', () => {
       side: 'BUY',
       type: 'MARKET',
       lots: 1.0,
-      stopLoss: 4250.0,
-      takeProfit: 4320.0
+      stopLoss: 4050.0,
+      takeProfit: 4200.0
     });
 
     expect(order.status).toBe('OPEN');
