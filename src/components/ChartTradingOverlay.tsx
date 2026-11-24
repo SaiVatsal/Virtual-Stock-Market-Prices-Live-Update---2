@@ -13,9 +13,7 @@ import {
   AlertCircle,
   Zap,
   Target,
-  ShieldAlert,
-  MousePointer,
-  Crosshair
+  ShieldAlert
 } from 'lucide-react';
 
 interface ChartTradingOverlayProps {
@@ -23,8 +21,6 @@ interface ChartTradingOverlayProps {
   quote?: PriceQuote;
   positions: Position[];
   theme?: 'dark' | 'light';
-  interactionMode?: 'TRADE' | 'PAN';
-  onInteractionModeChange?: (mode: 'TRADE' | 'PAN') => void;
   verticalScale?: number;
   onVerticalScaleChange?: (scale: number) => void;
   onOrderPlaced?: () => void;
@@ -54,8 +50,6 @@ export default function ChartTradingOverlay({
   quote,
   positions,
   theme = 'dark',
-  interactionMode: propInteractionMode,
-  onInteractionModeChange,
   verticalScale: propVerticalScale,
   onVerticalScaleChange,
   onOrderPlaced,
@@ -64,15 +58,6 @@ export default function ChartTradingOverlay({
 }: ChartTradingOverlayProps) {
   const overlayRef = useRef<HTMLDivElement>(null);
   const isDark = theme === 'dark';
-
-  // Interaction Mode: 'TRADE' (drag SL/TP, right-click menu) or 'PAN' (TradingView native mouse interactions)
-  const [localInteractionMode, setLocalInteractionMode] = useState<'TRADE' | 'PAN'>('TRADE');
-  const interactionMode = propInteractionMode ?? localInteractionMode;
-  const setInteractionMode = (val: 'TRADE' | 'PAN' | ((prev: 'TRADE' | 'PAN') => 'TRADE' | 'PAN')) => {
-    const nextVal = typeof val === 'function' ? val(interactionMode) : val;
-    if (onInteractionModeChange) onInteractionModeChange(nextVal);
-    else setLocalInteractionMode(nextVal);
-  };
 
   // Dragging state for SL / TP / Pending order lines
   const [dragState, setDragState] = useState<DragState | null>(null);
@@ -452,9 +437,7 @@ export default function ChartTradingOverlay({
       onClick={() => {
         if (contextMenu.isOpen) setContextMenu((prev) => ({ ...prev, isOpen: false }));
       }}
-      className={`absolute inset-0 select-none z-20 ${
-        interactionMode === 'TRADE' ? 'pointer-events-auto' : 'pointer-events-none'
-      }`}
+      className="absolute inset-0 select-none z-20 pointer-events-none"
     >
 
 
@@ -769,7 +752,7 @@ export default function ChartTradingOverlay({
         <div
           style={{ top: `${contextMenu.y}px`, left: `${contextMenu.x}px` }}
           onClick={(e) => e.stopPropagation()}
-          className="absolute z-50 w-64 rounded-xl bg-slate-900/95 dark:bg-[#0B0F19]/95 text-slate-200 border border-slate-700/80 shadow-2xl backdrop-blur-xl p-1.5 font-mono text-xs animate-scale-up"
+          className="absolute z-50 w-64 rounded-xl bg-slate-900/95 dark:bg-[#0B0F19]/95 text-slate-200 border border-slate-700/80 shadow-2xl backdrop-blur-xl p-1.5 font-mono text-xs animate-scale-up pointer-events-auto"
         >
           {/* Menu Header with Clicked Price and Bid/Ask */}
           <div className="flex items-center justify-between px-2.5 py-1.5 border-b border-slate-800 text-[11px]">

@@ -12,9 +12,7 @@ import {
   Columns,
   Square,
   Zap,
-  Layers,
-  Crosshair,
-  MousePointer
+  Layers
 } from 'lucide-react';
 
 interface TradingViewChartProps {
@@ -51,7 +49,6 @@ export default function TradingViewChart({
   const [scriptLoaded, setScriptLoaded] = useState<boolean>(false);
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
   const [isDualChart, setIsDualChart] = useState<boolean>(false);
-  const [interactionMode, setInteractionMode] = useState<'TRADE' | 'PAN'>('TRADE');
   const [verticalScale, setVerticalScale] = useState<number>(1.0);
   const [secondarySymbol, setSecondarySymbol] = useState<SymbolId>(
     symbol === 'XAUUSD' ? 'EURUSD' : 'XAUUSD'
@@ -269,35 +266,8 @@ export default function TradingViewChart({
           )}
         </div>
 
-        {/* Action Controls: Trade/Pan Mode, Scale Zoom, Dual/Single Grid Toggle, Quick Trade, Refresh & Fullscreen Button */}
+        {/* Action Controls: Scale Zoom, Dual/Single Grid Toggle, Quick Trade, Refresh & Fullscreen Button */}
         <div className="flex items-center gap-1.5 flex-wrap">
-          {/* Exness Trade on Chart vs Pan Mode Toggle */}
-          <button
-            onClick={() => setInteractionMode((m) => (m === 'TRADE' ? 'PAN' : 'TRADE'))}
-            title={
-              interactionMode === 'TRADE'
-                ? 'Exness Chart Trading Active: Drag SL/TP & Right-Click enabled. Click to switch to Pan Chart mode.'
-                : 'Pan Chart Active: TradingView native mouse interactions enabled. Click to switch to Exness Trading mode.'
-            }
-            className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-mono font-bold transition-all shadow-sm ${
-              interactionMode === 'TRADE'
-                ? 'bg-emerald-600 hover:bg-emerald-500 text-white border border-emerald-400/50'
-                : 'bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-amber-600 dark:text-amber-400 border border-slate-300 dark:border-slate-700'
-            }`}
-          >
-            {interactionMode === 'TRADE' ? (
-              <>
-                <Crosshair className="w-3.5 h-3.5 text-emerald-200" />
-                <span className="text-[11px] font-bold">Trade Mode</span>
-              </>
-            ) : (
-              <>
-                <MousePointer className="w-3.5 h-3.5 text-amber-500" />
-                <span className="text-[11px] font-bold">Pan Mode</span>
-              </>
-            )}
-          </button>
-
           {/* Overlay Vertical Scale Fine-Tuner */}
           <div className="flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-slate-200/80 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 text-[10px] font-mono text-slate-700 dark:text-slate-300">
             <span className="text-slate-400 hidden xl:inline">Scale:</span>
@@ -411,8 +381,6 @@ export default function TradingViewChart({
                 quote={quote}
                 positions={positions}
                 theme={theme}
-                interactionMode={interactionMode}
-                onInteractionModeChange={setInteractionMode}
                 verticalScale={verticalScale}
                 onVerticalScaleChange={setVerticalScale}
                 onOrderPlaced={onRefreshAll}
@@ -429,8 +397,6 @@ export default function TradingViewChart({
                 quote={quotes?.[secondarySymbol]}
                 positions={positions}
                 theme={theme}
-                interactionMode={interactionMode}
-                onInteractionModeChange={setInteractionMode}
                 verticalScale={verticalScale}
                 onVerticalScaleChange={setVerticalScale}
                 onOrderPlaced={onRefreshAll}
@@ -447,8 +413,6 @@ export default function TradingViewChart({
               quote={quote}
               positions={positions}
               theme={theme}
-              interactionMode={interactionMode}
-              onInteractionModeChange={setInteractionMode}
               verticalScale={verticalScale}
               onVerticalScaleChange={setVerticalScale}
               onOrderPlaced={onRefreshAll}
