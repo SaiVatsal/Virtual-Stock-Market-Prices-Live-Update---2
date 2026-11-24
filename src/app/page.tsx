@@ -170,24 +170,46 @@ export default function TradingTerminalPage() {
   // Fetch current user session
   const fetchCurrentUser = useCallback(async () => {
     try {
-      const res = await fetch('/api/auth/me');
+      let cachedUser: UserProfile | null = null;
+      try {
+        const cached = localStorage.getItem('nexus_user_profile');
+        if (cached) {
+          cachedUser = JSON.parse(cached);
+        }
+      } catch {}
+
+      const headers: Record<string, string> = {};
+      if (cachedUser && cachedUser.id) {
+        headers['x-user-id'] = cachedUser.id;
+      }
+
+      const res = await fetch('/api/auth/me', { headers });
       if (res.ok) {
         const data = await res.json();
-        if (data.user) {
+        if (data.authenticated && data.user) {
           setCurrentUser(data.user);
           try {
             localStorage.setItem('nexus_user_profile', JSON.stringify(data.user));
           } catch {}
           return;
+        } else {
+          // Explicit unauthenticated response: clear stale cached user profile
+          setCurrentUser(null);
+          try {
+            localStorage.removeItem('nexus_user_profile');
+          } catch {}
+          return;
         }
       }
-      const cached = localStorage.getItem('nexus_user_profile');
-      if (cached) {
-        const u = JSON.parse(cached);
-        if (u && u.id) setCurrentUser(u);
+
+      if (cachedUser && cachedUser.id) {
+        setCurrentUser(cachedUser);
+      } else {
+        setCurrentUser(null);
       }
     } catch (e) {
       console.error('Error fetching auth session:', e);
+      setCurrentUser(null);
     }
   }, []);
 

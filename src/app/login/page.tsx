@@ -40,11 +40,28 @@ export default function LoginPage() {
   useEffect(() => {
     async function checkActiveSession() {
       try {
-        const res = await fetch('/api/auth/me');
+        let cachedId: string | undefined;
+        try {
+          const cached = localStorage.getItem('nexus_user_profile');
+          if (cached) {
+            const parsed = JSON.parse(cached);
+            if (parsed?.id) cachedId = parsed.id;
+          }
+        } catch {}
+
+        const headers: Record<string, string> = {};
+        if (cachedId) headers['x-user-id'] = cachedId;
+
+        const res = await fetch('/api/auth/me', { headers });
         if (res.ok) {
           const data = await res.json();
-          if (data.user) {
+          if (data.authenticated && data.user) {
             setCurrentUser(data.user);
+          } else {
+            setCurrentUser(null);
+            try {
+              localStorage.removeItem('nexus_user_profile');
+            } catch {}
           }
         }
       } catch (e) {

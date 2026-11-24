@@ -6,7 +6,12 @@ export const dynamic = 'force-dynamic';
 export async function GET(req: NextRequest) {
   const cookieUserId = req.cookies.get('nexus_user_id')?.value;
   const headerUserId = req.headers.get('x-user-id');
-  const userId = cookieUserId || headerUserId || 'admin';
+  const queryUserId = req.nextUrl.searchParams.get('userId');
+  const userId = cookieUserId || headerUserId || queryUserId;
+
+  if (!userId) {
+    return NextResponse.json({ authenticated: false, user: null }, { status: 200 });
+  }
 
   const user = getUser(userId);
   if (!user) {

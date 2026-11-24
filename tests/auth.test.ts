@@ -1,4 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
+import { NextRequest } from 'next/server';
+import { GET as getMe } from '../src/app/api/auth/me/route';
 import {
   getUser,
   getUserByUsername,
@@ -144,5 +146,26 @@ describe('Multi-Tenant User Authentication & Isolation', () => {
       expect(acc.equity).toBe(bal);
       expect(acc.freeMargin).toBe(bal);
     });
+  });
+
+  it('does NOT automatically fall back to admin on /api/auth/me without active session', async () => {
+    const req = new NextRequest('http://localhost:3000/api/auth/me');
+    const res = await getMe(req);
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.authenticated).toBe(false);
+    expect(data.user).toBeNull();
+  });
+
+  it('correctly resolves user session when cookie or header is provided', async () => {
+    const req = new NextRequest('http://localhost:3000/api/auth/me', {
+      headers: { 'x-user-id': 'sai1327y@gmail.com' }
+    });
+    const res = await getMe(req);
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.authenticated).toBe(true);
+    expect(data.user?.username).toBe('sai1327y@gmail.com');
+    expect(data.user?.role).toBe('TRADER');
   });
 });
