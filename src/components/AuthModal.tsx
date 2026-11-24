@@ -31,20 +31,6 @@ export default function AuthModal({
 
   if (!isOpen) return null;
 
-  const handleFillAdmin = () => {
-    setTab('LOGIN');
-    setUsername('vatsal1327@gmail.com');
-    setPassword('Bitcoin@100');
-    setError(null);
-  };
-
-  const handleFillDemo = () => {
-    setTab('LOGIN');
-    setUsername('sai1327y@gmail.com');
-    setPassword('Sai@987654321');
-    setError(null);
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -106,57 +92,6 @@ export default function AuthModal({
             <p className="text-xs text-slate-500 dark:text-slate-400">
               {currentUser ? `Signed in as @${currentUser.username}` : 'Sign in or create a simulated account'}
             </p>
-          </div>
-        </div>
-
-        {/* Admin & Demo Credentials Quick Fill */}
-        <div className="grid grid-cols-2 gap-2 mb-4 text-xs">
-          <div className="p-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/50 flex flex-col justify-between">
-            <div>
-              <div className="flex items-center justify-between font-bold text-amber-800 dark:text-amber-300 text-[11px]">
-                <span className="flex items-center gap-1">
-                  <Sparkles className="w-3 h-3" /> Admin
-                </span>
-                <span className="text-[9px] px-1 rounded bg-amber-500/20 text-amber-300">ADMIN</span>
-              </div>
-              <p className="text-[10px] text-amber-700 dark:text-amber-400 mt-1 font-mono truncate">
-                vatsal1327@gmail.com
-              </p>
-              <p className="text-[9px] text-slate-500 dark:text-slate-400 font-mono">
-                Bitcoin@100
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={handleFillAdmin}
-              className="mt-2 py-1 px-2 rounded bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-[10px] transition-colors"
-            >
-              Auto Fill Admin
-            </button>
-          </div>
-
-          <div className="p-2.5 rounded-xl bg-cyan-50 dark:bg-cyan-950/40 border border-cyan-200 dark:border-cyan-800/50 flex flex-col justify-between">
-            <div>
-              <div className="flex items-center justify-between font-bold text-cyan-800 dark:text-cyan-300 text-[11px]">
-                <span className="flex items-center gap-1">
-                  <Zap className="w-3 h-3" /> User
-                </span>
-                <span className="text-[9px] px-1 rounded bg-cyan-500/20 text-cyan-300">TRADER</span>
-              </div>
-              <p className="text-[10px] text-cyan-700 dark:text-cyan-400 mt-1 font-mono truncate">
-                sai1327y@gmail.com
-              </p>
-              <p className="text-[9px] text-slate-500 dark:text-slate-400 font-mono">
-                Sai@987654321
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={handleFillDemo}
-              className="mt-2 py-1 px-2 rounded bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-[10px] transition-colors"
-            >
-              Auto Fill User
-            </button>
           </div>
         </div>
 

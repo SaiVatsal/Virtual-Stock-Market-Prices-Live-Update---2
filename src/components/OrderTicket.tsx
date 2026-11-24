@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { SymbolId, PriceQuote, OrderSide, OrderType, OrderRequest, MarketScheduleInfo } from '@/lib/types';
+import { SymbolId, PriceQuote, OrderSide, OrderType, OrderRequest, MarketScheduleInfo, UserProfile } from '@/lib/types';
 import { INSTRUMENT_SPECS } from '@/lib/specs';
 import {
   ArrowDown,
@@ -25,6 +25,8 @@ interface OrderTicketProps {
   onOrderPlaced: () => void;
   marketSchedule?: MarketScheduleInfo;
   marketMode: 'REAL_MARKET_HOURS' | 'WEEKEND_OTC_PRACTICE';
+  currentUser?: UserProfile | null;
+  onRequireAuth?: () => void;
 }
 
 export default function OrderTicket({
@@ -34,7 +36,9 @@ export default function OrderTicket({
   leverage,
   onOrderPlaced,
   marketSchedule,
-  marketMode
+  marketMode,
+  currentUser,
+  onRequireAuth
 }: OrderTicketProps) {
   const [orderType, setOrderType] = useState<OrderType>('MARKET');
   const [lots, setLots] = useState<number>(symbol === 'XAUUSD' ? 1.0 : symbol === 'EURUSD' ? 1.0 : 0.5);
@@ -71,6 +75,17 @@ export default function OrderTicket({
   const lotPresets = symbol === 'BTCUSD' ? [0.1, 0.5, 1.0, 2.0] : [0.01, 0.1, 0.5, 1.0, 2.5, 5.0];
 
   const handleExecute = async (side: OrderSide) => {
+    if (!currentUser) {
+      setFeedback({
+        type: 'error',
+        message: 'Please sign in or create an account to start paper trading.'
+      });
+      if (onRequireAuth) {
+        onRequireAuth();
+      }
+      return;
+    }
+
     if (isMarketClosed) {
       setFeedback({
         type: 'error',

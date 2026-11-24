@@ -54,38 +54,6 @@ export default function LoginPage() {
     checkActiveSession();
   }, []);
 
-  const handleQuickLogin = async (u: string, p: string) => {
-    setTab('LOGIN');
-    setUsername(u);
-    setPassword(p);
-    setError(null);
-    setLoading(true);
-
-    try {
-      const res = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: u, password: p })
-      });
-
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || 'Authentication failed');
-      }
-
-      setSuccessMsg(`Welcome, ${data.user.username}! Redirecting to terminal...`);
-      localStorage.setItem('nexus_user_profile', JSON.stringify(data.user));
-      setCurrentUser(data.user);
-
-      setTimeout(() => {
-        window.location.href = '/';
-      }, 700);
-    } catch (err: any) {
-      setError(err.message || 'Quick login failed');
-      setLoading(false);
-    }
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -212,86 +180,6 @@ export default function LoginPage() {
             <p className="text-xs text-slate-400">
               Sign in with institutional credentials or create an isolated practice account
             </p>
-          </div>
-
-          {/* Preset Credentials Quick-Login Cards */}
-          <div className="mb-6">
-            <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block mb-2">
-              ⚡ Instant 1-Click Credentials (Ready to Use)
-            </span>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {/* Admin Card */}
-              <div className="p-3.5 rounded-xl bg-amber-950/20 border border-amber-800/40 hover:border-amber-500/60 transition-all flex flex-col justify-between">
-                <div>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <span className="text-xs font-bold text-amber-400 flex items-center gap-1">
-                      <Sparkles className="w-3.5 h-3.5" /> Master Admin
-                    </span>
-                    <span className="text-[9px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                      ADMIN
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-slate-300 mb-0.5">
-                    User: <strong className="text-white font-mono">vatsal1327@gmail.com</strong>
-                  </p>
-                  <p className="text-[11px] text-slate-300 mb-2">
-                    Pass: <strong className="text-white font-mono">Bitcoin@100</strong>
-                  </p>
-                  <p className="text-[10px] text-slate-400 font-mono">
-                    Account: EX-9482104 • $100K • 1:100
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => handleQuickLogin('vatsal1327@gmail.com', 'Bitcoin@100')}
-                  disabled={loading}
-                  className="mt-3 w-full py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 text-xs font-bold transition-all flex items-center justify-center gap-1.5 disabled:opacity-50"
-                >
-                  <LogIn className="w-3.5 h-3.5" />
-                  <span>Log In as Admin</span>
-                </button>
-              </div>
-
-              {/* Demo / Trader User Card */}
-              <div className="p-3.5 rounded-xl bg-cyan-950/20 border border-cyan-800/40 hover:border-cyan-500/60 transition-all flex flex-col justify-between">
-                <div>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <span className="text-xs font-bold text-cyan-400 flex items-center gap-1">
-                      <Zap className="w-3.5 h-3.5" /> Trader User
-                    </span>
-                    <span className="text-[9px] px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
-                      TRADER
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-slate-300 mb-0.5">
-                    User: <strong className="text-white font-mono">sai1327y@gmail.com</strong>
-                  </p>
-                  <p className="text-[11px] text-slate-300 mb-2">
-                    Pass: <strong className="text-white font-mono">Sai@987654321</strong>
-                  </p>
-                  <p className="text-[10px] text-slate-400 font-mono">
-                    Account: EX-5582910 • $50K • 1:200
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => handleQuickLogin('sai1327y@gmail.com', 'Sai@987654321')}
-                  disabled={loading}
-                  className="mt-3 w-full py-1.5 rounded-lg bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40 text-xs font-bold transition-all flex items-center justify-center gap-1.5 disabled:opacity-50"
-                >
-                  <LogIn className="w-3.5 h-3.5" />
-                  <span>Log In as User</span>
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <div className="relative flex py-2 items-center mb-5">
-            <div className="flex-grow border-t border-slate-800"></div>
-            <span className="flex-shrink mx-3 text-[10px] text-slate-400 uppercase tracking-widest">
-              or enter custom credentials
-            </span>
-            <div className="flex-grow border-t border-slate-800"></div>
           </div>
 
           {/* Tab Selector */}
@@ -479,9 +367,7 @@ export default function LoginPage() {
               Terminal
             </Link>
             <span className="text-slate-700">•</span>
-            <span className="text-slate-400">Admin: vatsal1327@gmail.com / Bitcoin@100</span>
-            <span className="text-slate-700">•</span>
-            <span className="text-slate-400">User: sai1327y@gmail.com / Sai@987654321</span>
+            <span className="text-slate-400">Institutional Multi-Tenant Security</span>
           </div>
         </div>
       </footer>

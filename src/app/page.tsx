@@ -189,7 +189,14 @@ export default function TradingTerminalPage() {
   }, []);
 
   useEffect(() => {
-    fetchCurrentUser();
+    async function initSession() {
+      await fetchCurrentUser();
+      const cached = localStorage.getItem('nexus_user_profile');
+      if (!cached) {
+        setIsAuthOpen(true);
+      }
+    }
+    initSession();
   }, [fetchCurrentUser]);
 
   // Fetch closed trade history
@@ -320,6 +327,10 @@ export default function TradingTerminalPage() {
   };
 
   const handleQuickTrade = async (side: 'BUY' | 'SELL') => {
+    if (!currentUser) {
+      setIsAuthOpen(true);
+      return;
+    }
     try {
       const res = await fetch('/api/trade/order', {
         method: 'POST',
@@ -425,6 +436,8 @@ export default function TradingTerminalPage() {
               onOrderPlaced={handleRefreshAll}
               marketSchedule={marketSchedule}
               marketMode={marketMode}
+              currentUser={currentUser}
+              onRequireAuth={() => setIsAuthOpen(true)}
             />
           </div>
         </div>
