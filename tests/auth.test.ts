@@ -128,4 +128,21 @@ describe('Multi-Tenant User Authentication & Isolation', () => {
     expect(getPositions(userA.id).length).toBe(0);
     expect(getPositions(userB.id).length).toBe(1);
   });
+
+  it('supports initial onboarding options with custom leverage and balance presets', () => {
+    const balances = [10000, 50000, 100000, 250000];
+    const leverages = [50, 100, 200, 500];
+
+    balances.forEach((bal, idx) => {
+      const lev = leverages[idx];
+      const newUser = createUser(`onboarding_user_${bal}_${Date.now()}`, 'Pass@1234', bal, lev);
+      expect(newUser.id).toBeDefined();
+
+      const acc = getAccountState(newUser.id);
+      expect(acc.balance).toBe(bal);
+      expect(acc.leverage).toBe(lev);
+      expect(acc.equity).toBe(bal);
+      expect(acc.freeMargin).toBe(bal);
+    });
+  });
 });

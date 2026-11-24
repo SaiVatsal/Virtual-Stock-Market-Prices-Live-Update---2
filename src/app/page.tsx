@@ -18,6 +18,8 @@ import SettingsModal from '@/components/SettingsModal';
 import PineScriptModal from '@/components/PineScriptModal';
 import AccountStatementModal from '@/components/AccountStatementModal';
 import AuthModal from '@/components/AuthModal';
+import OnboardingGate from '@/components/OnboardingGate';
+import { TrendingUp, Loader2 } from 'lucide-react';
 
 const DEFAULT_ACCOUNT: AccountState = {
   balance: 100000,
@@ -83,6 +85,7 @@ export default function TradingTerminalPage() {
 
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
+  const [isAuthChecking, setIsAuthChecking] = useState<boolean>(true);
   const [isAuthOpen, setIsAuthOpen] = useState<boolean>(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
   const [isPineScriptOpen, setIsPineScriptOpen] = useState<boolean>(false);
@@ -190,10 +193,10 @@ export default function TradingTerminalPage() {
 
   useEffect(() => {
     async function initSession() {
-      await fetchCurrentUser();
-      const cached = localStorage.getItem('nexus_user_profile');
-      if (!cached) {
-        setIsAuthOpen(true);
+      try {
+        await fetchCurrentUser();
+      } finally {
+        setIsAuthChecking(false);
       }
     }
     initSession();
@@ -242,6 +245,7 @@ export default function TradingTerminalPage() {
 
   // Real-Time Server-Sent Events (SSE) Stream
   useEffect(() => {
+    if (!currentUser) return;
     let eventSource: EventSource | null = null;
     let reconnectTimer: any = null;
 
@@ -384,6 +388,35 @@ export default function TradingTerminalPage() {
     setCurrentUser(user);
     handleRefreshAll();
   };
+
+  if (isAuthChecking) {
+    return (
+      <div className="min-h-screen w-full flex flex-col items-center justify-center bg-slate-950 text-slate-100 font-mono">
+        <div className="flex flex-col items-center gap-4">
+          <div className="h-12 w-12 rounded-2xl bg-gradient-to-tr from-cyan-500 to-blue-600 flex items-center justify-center text-slate-950 shadow-xl shadow-cyan-500/20 animate-pulse">
+            <TrendingUp className="w-6 h-6" />
+          </div>
+          <div className="text-center">
+            <h2 className="text-base font-extrabold uppercase tracking-wider text-white">Nexus Pro Terminal</h2>
+            <p className="text-xs text-slate-400 mt-1 flex items-center justify-center gap-2">
+              <Loader2 className="w-3.5 h-3.5 animate-spin text-cyan-400" />
+              <span>Verifying session and connecting to institutional stream...</span>
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!currentUser) {
+    return (
+      <OnboardingGate
+        onSuccess={handleLoginSuccess}
+        theme={theme}
+        onToggleTheme={handleToggleTheme}
+      />
+    );
+  }
 
   return (
     <div className="flex flex-col min-h-screen bg-slate-100 dark:bg-[#05080E] text-slate-900 dark:text-slate-100 transition-colors">
