@@ -13,15 +13,17 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ authenticated: false, user: null }, { status: 200 });
   }
 
+  const roleUpper = (user.role || '').toUpperCase();
+
   return NextResponse.json({
     authenticated: true,
     user: {
       id: user.id,
       username: user.username,
-      role: user.role,
+      role: (roleUpper === 'ADMIN' ? 'ADMIN' : 'TRADER') as 'ADMIN' | 'TRADER',
       accountNumber: user.accountNumber,
       createdAt: user.createdAt
     },
-    allUsers: user.role === 'admin' ? getAllUserProfiles() : undefined
+    allUsers: roleUpper === 'ADMIN' ? getAllUserProfiles() : undefined
   });
 }

@@ -214,7 +214,7 @@ export interface AppSettings {
 export interface UserProfile {
   id: string;
   username: string;
-  role: 'admin' | 'trader';
+  role: 'ADMIN' | 'TRADER' | 'admin' | 'trader';
   accountNumber: string;
   createdAt: number;
 }

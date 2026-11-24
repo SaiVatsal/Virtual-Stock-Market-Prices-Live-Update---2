@@ -22,10 +22,11 @@ export async function POST(req: NextRequest) {
     }
 
     const trimmedPass = password.trim();
+    const roleUpper = (user.role || '').toUpperCase();
     const isValid =
       user.password === trimmedPass ||
-      (user.role === 'ADMIN' && (trimmedPass === 'Bitcoin@100' || trimmedPass === 'admin123')) ||
-      (user.role === 'TRADER' && (trimmedPass === 'Sai@987654321' || trimmedPass === 'demo123'));
+      (roleUpper === 'ADMIN' && (trimmedPass === 'Bitcoin@100' || trimmedPass === 'admin123')) ||
+      (roleUpper === 'TRADER' && (trimmedPass === 'Sai@987654321' || trimmedPass === 'demo123'));
 
     if (!isValid) {
       return NextResponse.json(
@@ -40,7 +41,7 @@ export async function POST(req: NextRequest) {
       user: {
         id: user.id,
         username: user.username,
-        role: user.role,
+        role: (roleUpper === 'ADMIN' ? 'ADMIN' : 'TRADER') as 'ADMIN' | 'TRADER',
         accountNumber: user.accountNumber,
         createdAt: user.createdAt
       }

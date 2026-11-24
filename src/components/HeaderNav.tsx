@@ -86,7 +86,7 @@ export default function HeaderNav({
                   TERMINAL <span className="text-cyan-600 dark:text-cyan-400">PRO</span>
                 </span>
                 <span className="text-[9px] uppercase font-mono px-1.5 py-0.2 rounded bg-amber-100 dark:bg-amber-950/70 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-800/40">
-                  {currentUser?.role === 'ADMIN' ? 'ADMIN' : 'DEMO'}
+                  {currentUser?.role?.toUpperCase() === 'ADMIN' ? 'ADMIN' : 'DEMO'}
                 </span>
               </div>
               <p className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">
@@ -281,7 +281,7 @@ export default function HeaderNav({
                 <span className="hidden sm:inline">
                   {currentUser ? `@${currentUser.username}` : 'Sign In / Register'}
                 </span>
-                {currentUser?.role === 'ADMIN' && (
+                {currentUser?.role?.toUpperCase() === 'ADMIN' && (
                   <span className="text-[9px] bg-amber-500/30 text-amber-700 dark:text-amber-300 px-1 py-0.2 rounded font-bold">
                     ADM
                   </span>

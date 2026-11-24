@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
       user: {
         id: user.id,
         username: user.username,
-        role: user.role,
+        role: (user.role.toUpperCase() === 'ADMIN' ? 'ADMIN' : 'TRADER') as 'ADMIN' | 'TRADER',
         accountNumber: user.accountNumber,
         createdAt: user.createdAt
       }

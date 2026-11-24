@@ -6,7 +6,7 @@ export interface UserRecord {
   id: string;
   username: string;
   password: string; // Plaintext or hash for virtual terminal
-  role: 'admin' | 'trader';
+  role: 'ADMIN' | 'TRADER' | 'admin' | 'trader';
   accountNumber: string;
   createdAt: number;
   account: AccountState;
@@ -413,7 +413,7 @@ export function getAllUserProfiles(): UserProfile[] {
   return Object.values(store.users).map((u) => ({
     id: u.id,
     username: u.username,
-    role: u.role,
+    role: (u.role.toUpperCase() === 'ADMIN' ? 'ADMIN' : 'TRADER') as 'ADMIN' | 'TRADER',
     accountNumber: u.accountNumber,
     createdAt: u.createdAt
   }));
