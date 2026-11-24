@@ -227,8 +227,18 @@ export default function TradingTerminalPage() {
   // Fetch closed trade history
   const fetchHistory = useCallback(async () => {
     try {
-      const url = currentUser ? `/api/journal?userId=${encodeURIComponent(currentUser.id)}` : '/api/journal';
-      const res = await fetch(url);
+      const uid = currentUser?.id;
+      const url = uid
+        ? `/api/journal?userId=${encodeURIComponent(uid)}&_t=${Date.now()}`
+        : `/api/journal?_t=${Date.now()}`;
+      const res = await fetch(url, {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          Pragma: 'no-cache',
+          ...(uid ? { 'x-user-id': uid } : {})
+        }
+      });
       if (res.ok) {
         const data = await res.json();
         if (Array.isArray(data.history)) {
@@ -246,8 +256,18 @@ export default function TradingTerminalPage() {
   // Instant Full Snapshot Fetcher (immediate quotes, positions, account, and history)
   const fetchSnapshot = useCallback(async () => {
     try {
-      const url = currentUser ? `/api/trade/order?userId=${encodeURIComponent(currentUser.id)}` : '/api/trade/order';
-      const res = await fetch(url);
+      const uid = currentUser?.id;
+      const url = uid
+        ? `/api/trade/order?userId=${encodeURIComponent(uid)}&_t=${Date.now()}`
+        : `/api/trade/order?_t=${Date.now()}`;
+      const res = await fetch(url, {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          Pragma: 'no-cache',
+          ...(uid ? { 'x-user-id': uid } : {})
+        }
+      });
       if (res.ok) {
         const data = await res.json();
         if (data.quotes) setQuotes(data.quotes);
@@ -385,6 +405,21 @@ export default function TradingTerminalPage() {
     }
   };
 
+  const handleStateSync = (data?: any) => {
+    if (data) {
+      if (data.positions) setPositions(data.positions);
+      if (data.account) setAccount(data.account);
+      if (data.quotes) setQuotes(data.quotes);
+      if (Array.isArray(data.history)) {
+        setHistory(data.history);
+        try {
+          localStorage.setItem('nexus_trade_history', JSON.stringify(data.history));
+        } catch {}
+      }
+    }
+    handleRefreshAll();
+  };
+
   const handleRefreshAll = () => {
     fetchSnapshot();
     fetchHistory();
@@ -477,7 +512,8 @@ export default function TradingTerminalPage() {
               positions={positions}
               onSelectSymbol={setSelectedSymbol}
               onQuickTrade={handleQuickTrade}
-              onRefreshAll={handleRefreshAll}
+              onRefreshAll={handleStateSync}
+              currentUser={currentUser}
             />
           </div>
 
@@ -488,7 +524,7 @@ export default function TradingTerminalPage() {
               quote={quotes[selectedSymbol]}
               freeMargin={account.freeMargin}
               leverage={account.leverage}
-              onOrderPlaced={handleRefreshAll}
+              onOrderPlaced={handleStateSync}
               marketSchedule={marketSchedule}
               marketMode={marketMode}
               currentUser={currentUser}
@@ -504,11 +540,12 @@ export default function TradingTerminalPage() {
             history={history}
             signals={signals}
             account={account}
-            onRefreshPositions={handleRefreshAll}
-            onRefreshHistory={handleRefreshAll}
+            onRefreshPositions={handleStateSync}
+            onRefreshHistory={fetchHistory}
             onTriggerTestSignal={handleTriggerTestSignal}
             isSimulatingSignal={isSimulatingSignal}
             onOpenStatement={handleOpenStatement}
+            currentUser={currentUser}
           />
         </div>
       </main>

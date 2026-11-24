@@ -1,15 +1,16 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Position } from '@/lib/types';
+import { Position, UserProfile } from '@/lib/types';
 import { X, ArrowDown, ArrowUp, Loader2, TrendingUp, TrendingDown } from 'lucide-react';
 
 interface PositionsTableProps {
   positions: Position[];
-  onPositionClosed: () => void;
+  onPositionClosed: (data?: any) => void;
+  currentUser?: UserProfile | null;
 }
 
-export default function PositionsTable({ positions, onPositionClosed }: PositionsTableProps) {
+export default function PositionsTable({ positions, onPositionClosed, currentUser }: PositionsTableProps) {
   const [closingId, setClosingId] = useState<string | null>(null);
   const [bulkClosing, setBulkClosing] = useState<'PROFIT' | 'LOSS' | 'ALL' | null>(null);
 
@@ -26,11 +27,15 @@ export default function PositionsTable({ positions, onPositionClosed }: Position
     try {
       const res = await fetch('/api/trade/close', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ filter })
+        headers: {
+          'Content-Type': 'application/json',
+          ...(currentUser?.id ? { 'x-user-id': currentUser.id } : {})
+        },
+        body: JSON.stringify({ filter, userId: currentUser?.id })
       });
       if (res.ok) {
-        onPositionClosed();
+        const data = await res.json();
+        onPositionClosed(data);
       }
     } catch (err) {
       console.error(`Error bulk closing ${filter} positions:`, err);
@@ -43,14 +48,20 @@ export default function PositionsTable({ positions, onPositionClosed }: Position
     setClosingId(positionId);
     try {
       const endpoint = isPending ? '/api/trade/cancel' : '/api/trade/close';
-      const body = isPending ? { orderId: positionId } : { positionId };
+      const body = isPending
+        ? { orderId: positionId, userId: currentUser?.id }
+        : { positionId, userId: currentUser?.id };
       const res = await fetch(endpoint, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(currentUser?.id ? { 'x-user-id': currentUser.id } : {})
+        },
         body: JSON.stringify(body)
       });
       if (res.ok) {
-        onPositionClosed();
+        const data = await res.json();
+        onPositionClosed(data);
       }
     } catch (err) {
       console.error('Error closing/cancelling position:', err);

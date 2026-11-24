@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { SymbolId, PriceQuote, Position, OrderSide, OrderType } from '@/lib/types';
+import { SymbolId, PriceQuote, Position, OrderSide, OrderType, UserProfile } from '@/lib/types';
 import { INSTRUMENT_SPECS } from '@/lib/specs';
 import {
   GripVertical,
@@ -23,9 +23,10 @@ interface ChartTradingOverlayProps {
   theme?: 'dark' | 'light';
   verticalScale?: number;
   onVerticalScaleChange?: (scale: number) => void;
-  onOrderPlaced?: () => void;
-  onPositionModified?: () => void;
-  onPositionClosed?: () => void;
+  onOrderPlaced?: (data?: any) => void;
+  onPositionModified?: (data?: any) => void;
+  onPositionClosed?: (data?: any) => void;
+  currentUser?: UserProfile | null;
 }
 
 interface DragState {
@@ -54,7 +55,8 @@ export default function ChartTradingOverlay({
   onVerticalScaleChange,
   onOrderPlaced,
   onPositionModified,
-  onPositionClosed
+  onPositionClosed,
+  currentUser
 }: ChartTradingOverlayProps) {
   const overlayRef = useRef<HTMLDivElement>(null);
   const isDark = theme === 'dark';
@@ -330,21 +332,30 @@ export default function ChartTradingOverlay({
     e.stopPropagation();
     try {
       if (pos.status === 'PENDING') {
-        await fetch('/api/trade/cancel', {
+        const res = await fetch('/api/trade/cancel', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ orderId: pos.id })
+          headers: {
+            'Content-Type': 'application/json',
+            ...(currentUser?.id ? { 'x-user-id': currentUser.id } : {})
+          },
+          body: JSON.stringify({ orderId: pos.id, userId: currentUser?.id })
         });
+        const data = await res.json();
         showToast(`Pending Order cancelled`);
+        if (onPositionClosed) onPositionClosed(data);
       } else {
-        await fetch('/api/trade/close', {
+        const res = await fetch('/api/trade/close', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ positionId: pos.id })
+          headers: {
+            'Content-Type': 'application/json',
+            ...(currentUser?.id ? { 'x-user-id': currentUser.id } : {})
+          },
+          body: JSON.stringify({ positionId: pos.id, userId: currentUser?.id })
         });
+        const data = await res.json();
         showToast(`Position #${pos.id.slice(-5)} closed`);
+        if (onPositionClosed) onPositionClosed(data);
       }
-      if (onPositionClosed) onPositionClosed();
     } catch (err) {
       console.error(err);
     }
@@ -355,13 +366,17 @@ export default function ChartTradingOverlay({
     try {
       const res = await fetch('/api/trade/order', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(currentUser?.id ? { 'x-user-id': currentUser.id } : {})
+        },
         body: JSON.stringify({
           symbol,
           side,
           type,
           lots: symbol === 'BTCUSD' ? 0.5 : 1.0,
           price: targetPrice,
+          userId: currentUser?.id,
           smcContext: {
             pattern: `Exness Chart Right-Click ${type}`,
             timeframe: '15m'
@@ -369,9 +384,10 @@ export default function ChartTradingOverlay({
         })
       });
       if (res.ok) {
+        const data = await res.json();
         showToast(`Placed ${side} ${type} @ $${targetPrice.toFixed(spec.decimals)}`);
         setContextMenu((prev) => ({ ...prev, isOpen: false }));
-        if (onOrderPlaced) onOrderPlaced();
+        if (onOrderPlaced) onOrderPlaced(data);
       }
     } catch (err) {
       console.error(err);

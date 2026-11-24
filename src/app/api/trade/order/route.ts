@@ -10,14 +10,23 @@ export async function GET(req: NextRequest) {
   const headerUserId = req.headers.get('x-user-id');
   const userId = queryUserId || cookieUserId || headerUserId || 'admin';
 
-  return NextResponse.json({
-    success: true,
-    positions: getPositions(userId),
-    account: getAccountState(userId),
-    quotes: getLatestQuotes(),
-    history: getTradeHistory(userId),
-    timestamp: Date.now()
-  });
+  return NextResponse.json(
+    {
+      success: true,
+      positions: getPositions(userId),
+      account: getAccountState(userId),
+      quotes: getLatestQuotes(),
+      history: getTradeHistory(userId),
+      timestamp: Date.now()
+    },
+    {
+      headers: {
+        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+        Pragma: 'no-cache',
+        Expires: '0'
+      }
+    }
+  );
 }
 
 export async function POST(req: NextRequest) {

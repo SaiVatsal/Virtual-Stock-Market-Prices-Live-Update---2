@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { SymbolId, PriceQuote, Position } from '@/lib/types';
+import { SymbolId, PriceQuote, Position, UserProfile } from '@/lib/types';
 import ChartTradingOverlay from './ChartTradingOverlay';
 import {
   Maximize2,
@@ -23,7 +23,8 @@ interface TradingViewChartProps {
   positions?: Position[];
   onSelectSymbol?: (symbol: SymbolId) => void;
   onQuickTrade?: (side: 'BUY' | 'SELL', targetSymbol?: SymbolId) => void;
-  onRefreshAll?: () => void;
+  onRefreshAll?: (data?: any) => void;
+  currentUser?: UserProfile | null;
 }
 
 const TV_SYMBOL_MAP: Record<SymbolId, string> = {
@@ -40,7 +41,8 @@ export default function TradingViewChart({
   positions = [],
   onSelectSymbol,
   onQuickTrade,
-  onRefreshAll
+  onRefreshAll,
+  currentUser
 }: TradingViewChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const container2Ref = useRef<HTMLDivElement>(null);
@@ -386,6 +388,7 @@ export default function TradingViewChart({
                 onOrderPlaced={onRefreshAll}
                 onPositionModified={onRefreshAll}
                 onPositionClosed={onRefreshAll}
+                currentUser={currentUser}
               />
             </div>
 
@@ -402,6 +405,7 @@ export default function TradingViewChart({
                 onOrderPlaced={onRefreshAll}
                 onPositionModified={onRefreshAll}
                 onPositionClosed={onRefreshAll}
+                currentUser={currentUser}
               />
             </div>
           </div>
@@ -418,6 +422,7 @@ export default function TradingViewChart({
               onOrderPlaced={onRefreshAll}
               onPositionModified={onRefreshAll}
               onPositionClosed={onRefreshAll}
+              currentUser={currentUser}
             />
           </div>
         )}

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Position, SignalItem, AccountState } from '@/lib/types';
+import { Position, SignalItem, AccountState, UserProfile } from '@/lib/types';
 import PositionsTable from './PositionsTable';
 import TradeHistoryTable from './TradeHistoryTable';
 import EquityCurveCard from './EquityCurveCard';
@@ -21,11 +21,12 @@ interface BottomWorkspaceProps {
   history: Position[];
   signals: SignalItem[];
   account: AccountState;
-  onRefreshPositions: () => void;
+  onRefreshPositions: (data?: any) => void;
   onRefreshHistory: () => void;
   onTriggerTestSignal: () => void;
   isSimulatingSignal: boolean;
   onOpenStatement?: () => void;
+  currentUser?: UserProfile | null;
 }
 
 type TabType = 'POSITIONS' | 'HISTORY' | 'EQUITY_CURVE' | 'SIGNALS' | 'RISK_COACH' | 'MACRO';
@@ -39,7 +40,8 @@ export default function BottomWorkspace({
   onRefreshHistory,
   onTriggerTestSignal,
   isSimulatingSignal,
-  onOpenStatement
+  onOpenStatement,
+  currentUser
 }: BottomWorkspaceProps) {
   const [activeTab, setActiveTab] = useState<TabType>('POSITIONS');
 
@@ -158,7 +160,11 @@ export default function BottomWorkspace({
       {/* Tab Content Body */}
       <div className="p-3.5 flex-1 overflow-y-auto">
         {activeTab === 'POSITIONS' && (
-          <PositionsTable positions={positions} onPositionClosed={onRefreshPositions} />
+          <PositionsTable
+            positions={positions}
+            onPositionClosed={onRefreshPositions}
+            currentUser={currentUser}
+          />
         )}
 
         {activeTab === 'HISTORY' && (

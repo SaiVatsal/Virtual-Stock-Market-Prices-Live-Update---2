@@ -22,7 +22,7 @@ interface OrderTicketProps {
   quote?: PriceQuote;
   freeMargin: number;
   leverage: number;
-  onOrderPlaced: () => void;
+  onOrderPlaced: (data?: any) => void;
   marketSchedule?: MarketScheduleInfo;
   marketMode: 'REAL_MARKET_HOURS' | 'WEEKEND_OTC_PRACTICE';
   currentUser?: UserProfile | null;
@@ -98,7 +98,7 @@ export default function OrderTicket({
     setFeedback(null);
 
     try {
-      const payload: OrderRequest = {
+      const payload: OrderRequest & { userId?: string } = {
         symbol,
         side,
         type: orderType,
@@ -106,6 +106,7 @@ export default function OrderTicket({
         price: orderType !== 'MARKET' ? parseFloat(limitPrice) : undefined,
         stopLoss: stopLoss ? parseFloat(stopLoss) : undefined,
         takeProfit: takeProfit ? parseFloat(takeProfit) : undefined,
+        userId: currentUser?.id,
         smcContext: {
           pattern: `Exness ${orderType} Instant Execution`,
           timeframe: '15m'
@@ -114,7 +115,10 @@ export default function OrderTicket({
 
       const res = await fetch('/api/trade/order', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(currentUser?.id ? { 'x-user-id': currentUser.id } : {})
+        },
         body: JSON.stringify(payload)
       });
 
@@ -127,7 +131,7 @@ export default function OrderTicket({
         type: 'success',
         message: data.message || `Filled ${side} ${lots} lots @ ${side === 'BUY' ? currentAsk : currentBid}`
       });
-      onOrderPlaced();
+      onOrderPlaced(data);
     } catch (err: any) {
       setFeedback({
         type: 'error',
