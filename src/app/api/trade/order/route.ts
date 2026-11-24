@@ -4,20 +4,29 @@ import { OrderRequest } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const queryUserId = req.nextUrl.searchParams.get('userId');
+  const cookieUserId = req.cookies.get('nexus_user_id')?.value;
+  const headerUserId = req.headers.get('x-user-id');
+  const userId = queryUserId || cookieUserId || headerUserId || 'admin';
+
   return NextResponse.json({
     success: true,
-    positions: getPositions(),
-    account: getAccountState(),
+    positions: getPositions(userId),
+    account: getAccountState(userId),
     quotes: getLatestQuotes(),
-    history: getTradeHistory(),
+    history: getTradeHistory(userId),
     timestamp: Date.now()
   });
 }
 
 export async function POST(req: NextRequest) {
   try {
-    const body: OrderRequest = await req.json();
+    const body: OrderRequest & { userId?: string } = await req.json();
+
+    const cookieUserId = req.cookies.get('nexus_user_id')?.value;
+    const headerUserId = req.headers.get('x-user-id');
+    const userId = body.userId || cookieUserId || headerUserId || 'admin';
 
     if (!body.symbol || !body.side || !body.lots) {
       return NextResponse.json(
@@ -33,15 +42,15 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const position = executeOrder(body);
+    const position = executeOrder(body, userId);
 
     return NextResponse.json({
       success: true,
       position,
-      positions: getPositions(),
-      account: getAccountState(),
+      positions: getPositions(userId),
+      account: getAccountState(userId),
       quotes: getLatestQuotes(),
-      history: getTradeHistory(),
+      history: getTradeHistory(userId),
       message: `Filled ${body.side} ${body.lots} lots on ${body.symbol} at $${position.entryPrice.toFixed(2)}`
     });
   } catch (err: any) {

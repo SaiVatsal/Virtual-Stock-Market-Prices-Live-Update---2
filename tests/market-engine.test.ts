@@ -9,7 +9,8 @@ import {
   updateMarketPrices,
   getLatestQuotes,
   modifyPosition,
-  cancelOrder
+  cancelOrder,
+  closePositionsByFilter
 } from '../src/lib/market-engine';
 
 describe('Market Engine & OMS', () => {
@@ -212,6 +213,61 @@ describe('Market Engine & OMS', () => {
     // Should now be triggered to OPEN
     const active = getPositions().find((p) => p.id === pending.id);
     expect(active?.status).toBe('OPEN');
+  });
+
+  it('closes all profit positions and all loss positions selectively', () => {
+    // Set prices
+    updateMarketPrices({
+      XAUUSD: { symbol: 'XAUUSD', bid: 2400.0, ask: 2400.2, spread: 0.2 },
+      EURUSD: { symbol: 'EURUSD', bid: 1.1000, ask: 1.1001, spread: 0.0001 }
+    });
+
+    // 1. Winning BUY position on Gold (bought at 2400.2, current bid 2410.0)
+    const winPos = executeOrder({
+      symbol: 'XAUUSD',
+      side: 'BUY',
+      type: 'MARKET',
+      lots: 1.0
+    });
+
+    // 2. Losing BUY position on Euro (bought at 1.1001, price drops to 1.0900)
+    const lossPos = executeOrder({
+      symbol: 'EURUSD',
+      side: 'BUY',
+      type: 'MARKET',
+      lots: 1.0
+    });
+
+    // Update prices so XAUUSD is in profit and EURUSD is in loss
+    updateMarketPrices({
+      XAUUSD: { symbol: 'XAUUSD', bid: 2410.0, ask: 2410.2 },
+      EURUSD: { symbol: 'EURUSD', bid: 1.0900, ask: 1.0901 }
+    });
+
+    const openBefore = getPositions();
+    expect(openBefore.find((p) => p.id === winPos.id)?.profit).toBeGreaterThan(0);
+    expect(openBefore.find((p) => p.id === lossPos.id)?.profit).toBeLessThan(0);
+
+    // Close only profit positions
+    const closedProfit = closePositionsByFilter('PROFIT');
+    expect(closedProfit.length).toBe(1);
+    expect(closedProfit[0].id).toBe(winPos.id);
+    expect(closedProfit[0].status).toBe('CLOSED');
+
+    // Only losing position should remain open
+    const remainingAfterProfit = getPositions();
+    expect(remainingAfterProfit.length).toBe(1);
+    expect(remainingAfterProfit[0].id).toBe(lossPos.id);
+
+    // Close only loss positions
+    const closedLoss = closePositionsByFilter('LOSS');
+    expect(closedLoss.length).toBe(1);
+    expect(closedLoss[0].id).toBe(lossPos.id);
+    expect(closedLoss[0].status).toBe('CLOSED');
+
+    // All positions should now be closed
+    expect(getPositions().length).toBe(0);
+    expect(getTradeHistory().length).toBe(2);
   });
 });
 

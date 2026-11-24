@@ -210,3 +210,11 @@ export interface AppSettings {
   exnessAccountType?: 'PRO' | 'RAW_SPREAD' | 'STANDARD' | 'ZERO';
   marketMode?: 'REAL_MARKET_HOURS' | 'WEEKEND_OTC_PRACTICE';
 }
+
+export interface UserProfile {
+  id: string;
+  username: string;
+  role: 'admin' | 'trader';
+  accountNumber: string;
+  createdAt: number;
+}

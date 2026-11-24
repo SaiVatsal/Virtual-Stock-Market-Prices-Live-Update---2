@@ -7,7 +7,8 @@ import {
   AccountState,
   Position,
   SignalItem,
-  MarketScheduleInfo
+  MarketScheduleInfo,
+  UserProfile
 } from '@/lib/types';
 import HeaderNav from '@/components/HeaderNav';
 import TradingViewChart from '@/components/TradingViewChart';
@@ -16,6 +17,7 @@ import BottomWorkspace from '@/components/BottomWorkspace';
 import SettingsModal from '@/components/SettingsModal';
 import PineScriptModal from '@/components/PineScriptModal';
 import AccountStatementModal from '@/components/AccountStatementModal';
+import AuthModal from '@/components/AuthModal';
 
 const DEFAULT_ACCOUNT: AccountState = {
   balance: 100000,
@@ -80,6 +82,8 @@ export default function TradingTerminalPage() {
   });
 
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
+  const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
+  const [isAuthOpen, setIsAuthOpen] = useState<boolean>(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
   const [isPineScriptOpen, setIsPineScriptOpen] = useState<boolean>(false);
   const [isStatementOpen, setIsStatementOpen] = useState<boolean>(false);
@@ -160,10 +164,39 @@ export default function TradingTerminalPage() {
     } catch {}
   }, []);
 
+  // Fetch current user session
+  const fetchCurrentUser = useCallback(async () => {
+    try {
+      const res = await fetch('/api/auth/me');
+      if (res.ok) {
+        const data = await res.json();
+        if (data.user) {
+          setCurrentUser(data.user);
+          try {
+            localStorage.setItem('nexus_user_profile', JSON.stringify(data.user));
+          } catch {}
+          return;
+        }
+      }
+      const cached = localStorage.getItem('nexus_user_profile');
+      if (cached) {
+        const u = JSON.parse(cached);
+        if (u && u.id) setCurrentUser(u);
+      }
+    } catch (e) {
+      console.error('Error fetching auth session:', e);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchCurrentUser();
+  }, [fetchCurrentUser]);
+
   // Fetch closed trade history
   const fetchHistory = useCallback(async () => {
     try {
-      const res = await fetch('/api/journal');
+      const url = currentUser ? `/api/journal?userId=${encodeURIComponent(currentUser.id)}` : '/api/journal';
+      const res = await fetch(url);
       if (res.ok) {
         const data = await res.json();
         if (Array.isArray(data.history)) {
@@ -176,12 +209,13 @@ export default function TradingTerminalPage() {
     } catch (err) {
       console.error('Error fetching trade history:', err);
     }
-  }, []);
+  }, [currentUser]);
 
   // Instant Full Snapshot Fetcher (immediate quotes, positions, account, and history)
   const fetchSnapshot = useCallback(async () => {
     try {
-      const res = await fetch('/api/trade/order');
+      const url = currentUser ? `/api/trade/order?userId=${encodeURIComponent(currentUser.id)}` : '/api/trade/order';
+      const res = await fetch(url);
       if (res.ok) {
         const data = await res.json();
         if (data.quotes) setQuotes(data.quotes);
@@ -197,7 +231,7 @@ export default function TradingTerminalPage() {
     } catch (e) {
       console.error('Failed to fetch market snapshot:', e);
     }
-  }, []);
+  }, [currentUser]);
 
   // Real-Time Server-Sent Events (SSE) Stream
   useEffect(() => {
@@ -205,7 +239,8 @@ export default function TradingTerminalPage() {
     let reconnectTimer: any = null;
 
     const connectSSE = () => {
-      eventSource = new EventSource('/api/stream/market');
+      const sseUrl = currentUser ? `/api/stream/market?userId=${encodeURIComponent(currentUser.id)}` : '/api/stream/market';
+      eventSource = new EventSource(sseUrl);
 
       eventSource.onmessage = (event) => {
         try {
@@ -245,7 +280,7 @@ export default function TradingTerminalPage() {
       if (eventSource) eventSource.close();
       clearTimeout(reconnectTimer);
     };
-  }, [fetchSnapshot, fetchMarketStatus, fetchSignals, fetchHistory]);
+  }, [fetchSnapshot, fetchMarketStatus, fetchSignals, fetchHistory, currentUser]);
 
   // Toggle between Real Market Hours (freezes weekends) vs 24/7 OTC Demo
   const handleToggleMarketMode = async () => {
@@ -294,6 +329,7 @@ export default function TradingTerminalPage() {
           side,
           type: 'MARKET',
           lots: selectedSymbol === 'BTCUSD' ? 0.5 : 1.0,
+          userId: currentUser?.id,
           smcContext: {
             pattern: 'Fullscreen Quick Execution',
             timeframe: '15m'
@@ -324,6 +360,20 @@ export default function TradingTerminalPage() {
     setIsStatementOpen(true);
   };
 
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+    } catch {}
+    localStorage.removeItem('nexus_user_profile');
+    setCurrentUser(null);
+    handleRefreshAll();
+  };
+
+  const handleLoginSuccess = (user: UserProfile) => {
+    setCurrentUser(user);
+    handleRefreshAll();
+  };
+
   return (
     <div className="flex flex-col min-h-screen bg-slate-100 dark:bg-[#05080E] text-slate-900 dark:text-slate-100 transition-colors">
       {/* Exness Top Navigation & Telemetry */}
@@ -341,6 +391,8 @@ export default function TradingTerminalPage() {
         marketMode={marketMode}
         onToggleMarketMode={handleToggleMarketMode}
         exnessAccount={exnessAccount}
+        currentUser={currentUser}
+        onOpenAuth={() => setIsAuthOpen(true)}
         theme={theme}
         onToggleTheme={handleToggleTheme}
       />
@@ -411,6 +463,14 @@ export default function TradingTerminalPage() {
         history={history}
         account={account}
         exnessAccount={exnessAccount}
+      />
+
+      <AuthModal
+        isOpen={isAuthOpen}
+        onClose={() => setIsAuthOpen(false)}
+        currentUser={currentUser}
+        onLoginSuccess={handleLoginSuccess}
+        onLogout={handleLogout}
       />
     </div>
   );

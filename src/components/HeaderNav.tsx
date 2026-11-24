@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { AccountState, PriceQuote, SymbolId, MarketScheduleInfo } from '@/lib/types';
+import { AccountState, PriceQuote, SymbolId, MarketScheduleInfo, UserProfile } from '@/lib/types';
 import {
   TrendingUp,
   Settings,
@@ -14,7 +14,8 @@ import {
   ToggleRight,
   Sun,
   Moon,
-  FileSpreadsheet
+  FileSpreadsheet,
+  User
 } from 'lucide-react';
 
 interface HeaderNavProps {
@@ -35,6 +36,8 @@ interface HeaderNavProps {
     server: string;
     type: string;
   };
+  currentUser?: UserProfile | null;
+  onOpenAuth?: () => void;
   theme: 'dark' | 'light';
   onToggleTheme: () => void;
 }
@@ -53,6 +56,8 @@ export default function HeaderNav({
   marketMode,
   onToggleMarketMode,
   exnessAccount,
+  currentUser,
+  onOpenAuth,
   theme,
   onToggleTheme
 }: HeaderNavProps) {
@@ -81,11 +86,11 @@ export default function HeaderNav({
                   TERMINAL <span className="text-cyan-600 dark:text-cyan-400">PRO</span>
                 </span>
                 <span className="text-[9px] uppercase font-mono px-1.5 py-0.2 rounded bg-amber-100 dark:bg-amber-950/70 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-800/40">
-                  {exnessAccount?.type || 'PRO'} DEMO
+                  {currentUser?.role === 'ADMIN' ? 'ADMIN' : 'DEMO'}
                 </span>
               </div>
               <p className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">
-                {exnessAccount?.id || 'EX-9482104'} • {exnessAccount?.server || 'Exness-Trial2'}
+                {currentUser?.accountNumber || exnessAccount?.id || 'EX-9482104'} • {currentUser ? `@${currentUser.username}` : (exnessAccount?.server || 'Exness-Trial2')}
               </p>
             </div>
           </div>
@@ -260,6 +265,29 @@ export default function HeaderNav({
             >
               <Settings className="w-4 h-4" />
             </button>
+
+            {/* Account / User Session Button */}
+            {onOpenAuth && (
+              <button
+                onClick={onOpenAuth}
+                title={currentUser ? `Signed in as @${currentUser.username} (${currentUser.accountNumber})` : 'Create Account or Sign In'}
+                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold font-mono transition-all ${
+                  currentUser
+                    ? 'bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-700 dark:text-cyan-300 border border-cyan-400/40 shadow-sm'
+                    : 'bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white shadow-sm'
+                }`}
+              >
+                <User className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">
+                  {currentUser ? `@${currentUser.username}` : 'Sign In / Register'}
+                </span>
+                {currentUser?.role === 'ADMIN' && (
+                  <span className="text-[9px] bg-amber-500/30 text-amber-700 dark:text-amber-300 px-1 py-0.2 rounded font-bold">
+                    ADM
+                  </span>
+                )}
+              </button>
+            )}
           </div>
         </div>
       </div>

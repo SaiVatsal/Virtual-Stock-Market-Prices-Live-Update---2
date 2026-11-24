@@ -6,6 +6,9 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
   const encoder = new TextEncoder();
+  const cookieUserId = req.cookies.get('nexus_user_id')?.value;
+  const urlUserId = req.nextUrl.searchParams.get('userId');
+  const userId = urlUserId || cookieUserId || 'admin';
 
   const stream = new ReadableStream({
     async start(controller) {
@@ -16,9 +19,9 @@ export async function GET(req: NextRequest) {
         const initialData = JSON.stringify({
           type: 'SNAPSHOT',
           quotes: getLatestQuotes(),
-          account: getAccountState(),
-          positions: getPositions(),
-          history: getTradeHistory(),
+          account: getAccountState(userId),
+          positions: getPositions(userId),
+          history: getTradeHistory(userId),
           timestamp: Date.now()
         });
         controller.enqueue(encoder.encode(`data: ${initialData}\n\n`));
@@ -40,9 +43,9 @@ export async function GET(req: NextRequest) {
           const payload = JSON.stringify({
             type: 'TICK',
             quotes: getLatestQuotes(),
-            account: getAccountState(),
-            positions: getPositions(),
-            history: getTradeHistory(),
+            account: getAccountState(userId),
+            positions: getPositions(userId),
+            history: getTradeHistory(userId),
             timestamp: Date.now()
           });
 

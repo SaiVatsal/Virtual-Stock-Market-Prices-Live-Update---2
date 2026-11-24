@@ -5,15 +5,25 @@ import { getStore, saveStore } from '@/lib/store';
 
 export const dynamic = 'force-dynamic';
 
-export async function GET() {
-  const history = getTradeHistory();
+export async function GET(req: NextRequest) {
+  const queryUserId = req.nextUrl.searchParams.get('userId');
+  const cookieUserId = req.cookies.get('nexus_user_id')?.value;
+  const headerUserId = req.headers.get('x-user-id');
+  const userId = queryUserId || cookieUserId || headerUserId || 'admin';
+
+  const history = getTradeHistory(userId);
   return NextResponse.json({ history });
 }
 
 export async function POST(req: NextRequest) {
   try {
-    const { tradeId } = await req.json();
-    const store = getStore();
+    const body = await req.json();
+    const { tradeId } = body;
+    const cookieUserId = req.cookies.get('nexus_user_id')?.value;
+    const headerUserId = req.headers.get('x-user-id');
+    const userId = body.userId || cookieUserId || headerUserId || 'admin';
+
+    const store = getStore(userId);
     const trade = store.history.find((t) => t.id === tradeId);
 
     if (!trade) {
@@ -22,7 +32,7 @@ export async function POST(req: NextRequest) {
 
     const critique = await generateTradeCritique(trade);
     trade.aiCritique = critique;
-    saveStore(store);
+    saveStore(store, userId);
 
     return NextResponse.json({ success: true, critique });
   } catch (err: any) {

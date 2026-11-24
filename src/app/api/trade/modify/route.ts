@@ -6,21 +6,29 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { positionId, stopLoss, takeProfit, entryPrice } = body;
 
+    const cookieUserId = req.cookies.get('nexus_user_id')?.value;
+    const headerUserId = req.headers.get('x-user-id');
+    const userId = body.userId || cookieUserId || headerUserId || 'admin';
+
     if (!positionId) {
       return NextResponse.json({ error: 'Missing positionId' }, { status: 400 });
     }
 
-    const updated = modifyPosition(positionId, {
-      stopLoss: stopLoss !== undefined ? (stopLoss === null ? null : parseFloat(stopLoss)) : undefined,
-      takeProfit: takeProfit !== undefined ? (takeProfit === null ? null : parseFloat(takeProfit)) : undefined,
-      entryPrice: entryPrice !== undefined ? parseFloat(entryPrice) : undefined
-    });
+    const updated = modifyPosition(
+      positionId,
+      {
+        stopLoss: stopLoss !== undefined ? (stopLoss === null ? null : parseFloat(stopLoss)) : undefined,
+        takeProfit: takeProfit !== undefined ? (takeProfit === null ? null : parseFloat(takeProfit)) : undefined,
+        entryPrice: entryPrice !== undefined ? parseFloat(entryPrice) : undefined
+      },
+      userId
+    );
 
     return NextResponse.json({
       success: true,
       position: updated,
-      positions: getPositions(),
-      account: getAccountState(),
+      positions: getPositions(userId),
+      account: getAccountState(userId),
       quotes: getLatestQuotes(),
       message: `Updated order ${positionId} parameters`
     });

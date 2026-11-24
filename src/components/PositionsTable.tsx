@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { Position } from '@/lib/types';
-import { X, ArrowDown, ArrowUp, Loader2 } from 'lucide-react';
+import { X, ArrowDown, ArrowUp, Loader2, TrendingUp, TrendingDown } from 'lucide-react';
 
 interface PositionsTableProps {
   positions: Position[];
@@ -11,6 +11,33 @@ interface PositionsTableProps {
 
 export default function PositionsTable({ positions, onPositionClosed }: PositionsTableProps) {
   const [closingId, setClosingId] = useState<string | null>(null);
+  const [bulkClosing, setBulkClosing] = useState<'PROFIT' | 'LOSS' | 'ALL' | null>(null);
+
+  const openPositions = positions.filter((p) => p.status === 'OPEN');
+  const profitPositions = openPositions.filter((p) => p.profit > 0);
+  const lossPositions = openPositions.filter((p) => p.profit < 0);
+
+  const profitSum = profitPositions.reduce((acc, p) => acc + p.profit, 0);
+  const lossSum = lossPositions.reduce((acc, p) => acc + p.profit, 0);
+  const totalFloating = openPositions.reduce((acc, p) => acc + p.profit, 0);
+
+  const handleBulkClose = async (filter: 'PROFIT' | 'LOSS' | 'ALL') => {
+    setBulkClosing(filter);
+    try {
+      const res = await fetch('/api/trade/close', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ filter })
+      });
+      if (res.ok) {
+        onPositionClosed();
+      }
+    } catch (err) {
+      console.error(`Error bulk closing ${filter} positions:`, err);
+    } finally {
+      setBulkClosing(null);
+    }
+  };
 
   const handleClose = async (positionId: string, isPending?: boolean) => {
     setClosingId(positionId);
@@ -42,7 +69,65 @@ export default function PositionsTable({ positions, onPositionClosed }: Position
   }
 
   return (
-    <div className="w-full overflow-x-auto">
+    <div className="flex flex-col">
+      {/* Quick Action & Bulk Close Toolbar */}
+      <div className="flex items-center justify-between pb-2 mb-2 border-b border-slate-200 dark:border-slate-800/80 px-1 flex-wrap gap-2">
+        <div className="flex items-center gap-3 text-xs font-mono">
+          <span className="text-slate-500">
+            Open: <strong className="text-slate-900 dark:text-slate-200">{openPositions.length}</strong>
+          </span>
+          <span className="text-slate-500">
+            Floating P&L:{' '}
+            <strong className={totalFloating >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}>
+              {totalFloating >= 0 ? '+' : ''}${totalFloating.toFixed(2)}
+            </strong>
+          </span>
+        </div>
+
+        <div className="flex items-center gap-2">
+          {/* Close All Profit Positions */}
+          <button
+            onClick={() => handleBulkClose('PROFIT')}
+            disabled={profitPositions.length === 0 || bulkClosing !== null}
+            title={profitPositions.length > 0 ? `Close ${profitPositions.length} profitable position(s)` : 'No profitable positions open'}
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-mono font-semibold transition-all shadow-sm border bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-950/40 dark:hover:bg-emerald-900/60 dark:text-emerald-300 dark:border-emerald-700/50 disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            {bulkClosing === 'PROFIT' ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin text-emerald-500" />
+            ) : (
+              <TrendingUp className="w-3.5 h-3.5 text-emerald-500" />
+            )}
+            <span>Close All Profit</span>
+            {profitPositions.length > 0 && (
+              <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-emerald-200 dark:bg-emerald-800 text-emerald-900 dark:text-emerald-100">
+                +{profitPositions.length} (+${profitSum.toFixed(2)})
+              </span>
+            )}
+          </button>
+
+          {/* Close All Loss Positions */}
+          <button
+            onClick={() => handleBulkClose('LOSS')}
+            disabled={lossPositions.length === 0 || bulkClosing !== null}
+            title={lossPositions.length > 0 ? `Close ${lossPositions.length} losing position(s)` : 'No losing positions open'}
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-mono font-semibold transition-all shadow-sm border bg-rose-50 hover:bg-rose-100 text-rose-800 border-rose-300 dark:bg-rose-950/40 dark:hover:bg-rose-900/60 dark:text-rose-300 dark:border-rose-700/50 disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            {bulkClosing === 'LOSS' ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin text-rose-500" />
+            ) : (
+              <TrendingDown className="w-3.5 h-3.5 text-rose-500" />
+            )}
+            <span>Close All Loss</span>
+            {lossPositions.length > 0 && (
+              <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-rose-200 dark:bg-rose-800 text-rose-900 dark:text-rose-100">
+                {lossPositions.length} (${lossSum.toFixed(2)})
+              </span>
+            )}
+          </button>
+        </div>
+      </div>
+
+      <div className="w-full overflow-x-auto">
       <table className="w-full text-left text-xs font-mono">
         <thead className="bg-slate-100 dark:bg-[#0A0E18] text-[10px] text-slate-500 dark:text-slate-400 uppercase tracking-wider border-b border-slate-200 dark:border-slate-800">
           <tr>
@@ -138,6 +223,7 @@ export default function PositionsTable({ positions, onPositionClosed }: Position
           })}
         </tbody>
       </table>
+    </div>
     </div>
   );
 }

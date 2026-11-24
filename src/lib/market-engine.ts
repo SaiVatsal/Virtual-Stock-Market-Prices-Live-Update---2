@@ -76,18 +76,18 @@ export function resetStoreForTest(initialBalance = 100000, leverage = 100): void
   setMemoryStoreOnly(fresh);
 }
 
-export function getPositions(): Position[] {
-  const store = getStore();
+export function getPositions(userId?: string): Position[] {
+  const store = getStore(userId);
   return store.positions;
 }
 
-export function getTradeHistory(): Position[] {
-  const store = getStore();
+export function getTradeHistory(userId?: string): Position[] {
+  const store = getStore(userId);
   return store.history;
 }
 
-export function getAccountState(): AccountState {
-  const store = getStore();
+export function getAccountState(userId?: string): AccountState {
+  const store = getStore(userId);
   return store.account;
 }
 
@@ -95,8 +95,8 @@ export function getAccountState(): AccountState {
  * Recalculates Unrealized P&L and Margin for all open positions,
  * checks Stop Loss / Take Profit conditions, and refreshes Account Equity.
  */
-export function recalculatePortfolio(): void {
-  const store = getStore();
+export function recalculatePortfolio(userId?: string): void {
+  const store = getStore(userId);
   let totalMarginUsed = 0;
   let totalUnrealizedPnL = 0;
   const remainingPositions: Position[] = [];
@@ -205,7 +205,7 @@ export function recalculatePortfolio(): void {
       ? Math.round((store.account.equity / store.account.marginUsed) * 10000) / 100
       : 0;
 
-  saveStore(store);
+  saveStore(store, userId);
 }
 
 /**
@@ -222,14 +222,22 @@ export function updateMarketPrices(prices: Partial<Record<SymbolId, Partial<Pric
       };
     }
   }
-  recalculatePortfolio();
+
+  const root = getStore();
+  if (root.users && Object.keys(root.users).length > 0) {
+    for (const uid of Object.keys(root.users)) {
+      recalculatePortfolio(uid);
+    }
+  } else {
+    recalculatePortfolio();
+  }
 }
 
 /**
  * Executes a new Market or Limit Order
  */
-export function executeOrder(req: OrderRequest): Position {
-  const store = getStore();
+export function executeOrder(req: OrderRequest, userId?: string): Position {
+  const store = getStore(userId);
 
   const tradeCheck = isInstrumentTradeable(req.symbol);
   if (!tradeCheck.tradeable) {
@@ -273,7 +281,8 @@ export function executeOrder(req: OrderRequest): Position {
   };
 
   store.positions.unshift(newPosition);
-  recalculatePortfolio();
+  recalculatePortfolio(userId);
+  saveStore(store, userId);
   return newPosition;
 }
 
@@ -286,9 +295,10 @@ export function modifyPosition(
     stopLoss?: number | null;
     takeProfit?: number | null;
     entryPrice?: number;
-  }
+  },
+  userId?: string
 ): Position {
-  const store = getStore();
+  const store = getStore(userId);
   const pos = store.positions.find((p) => p.id === positionId);
   if (!pos) {
     throw new Error(`Position or order ${positionId} not found`);
@@ -307,15 +317,16 @@ export function modifyPosition(
     }
   }
 
-  recalculatePortfolio();
+  recalculatePortfolio(userId);
+  saveStore(store, userId);
   return pos;
 }
 
 /**
  * Cancels a pending order or closes an open position
  */
-export function cancelOrder(orderId: string): Position {
-  const store = getStore();
+export function cancelOrder(orderId: string, userId?: string): Position {
+  const store = getStore(userId);
   const index = store.positions.findIndex((p) => p.id === orderId);
   if (index === -1) {
     throw new Error(`Order ${orderId} not found`);
@@ -324,18 +335,19 @@ export function cancelOrder(orderId: string): Position {
   if (pos.status === 'PENDING') {
     pos.status = 'CANCELLED';
     store.positions.splice(index, 1);
-    recalculatePortfolio();
+    recalculatePortfolio(userId);
+    saveStore(store, userId);
     return pos;
   } else {
-    return closePosition(orderId);
+    return closePosition(orderId, undefined, userId);
   }
 }
 
 /**
  * Closes an open position manually
  */
-export function closePosition(positionId: string, currentExitPrice?: number): Position {
-  const store = getStore();
+export function closePosition(positionId: string, currentExitPrice?: number, userId?: string): Position {
+  const store = getStore(userId);
   const index = store.positions.findIndex((p) => p.id === positionId);
   if (index === -1) {
     throw new Error(`Position ${positionId} not found`);
@@ -366,6 +378,57 @@ export function closePosition(positionId: string, currentExitPrice?: number): Po
   store.account.realizedPnL = Math.round((store.account.realizedPnL + pos.profit) * 100) / 100;
   store.history.unshift(pos);
 
-  recalculatePortfolio();
+  recalculatePortfolio(userId);
+  saveStore(store, userId);
   return pos;
+}
+
+/**
+ * Closes all open positions matching a filter ('PROFIT' | 'LOSS' | 'ALL')
+ */
+export function closePositionsByFilter(filter: 'PROFIT' | 'LOSS' | 'ALL', userId?: string): Position[] {
+  const store = getStore(userId);
+  const openPositions = store.positions.filter((p) => p.status === 'OPEN');
+  const targets = openPositions.filter((pos) => {
+    if (filter === 'PROFIT') return pos.profit > 0;
+    if (filter === 'LOSS') return pos.profit < 0;
+    return true;
+  });
+
+  if (targets.length === 0) {
+    return [];
+  }
+
+  const closed: Position[] = [];
+  for (const pos of targets) {
+    const quote = latestQuotes[pos.symbol];
+    const spec = INSTRUMENT_SPECS[pos.symbol];
+    const exitPrice =
+      pos.side === 'BUY' ? (quote ? quote.bid : pos.entryPrice) : (quote ? quote.ask : pos.entryPrice);
+
+    pos.status = 'CLOSED';
+    pos.closeTime = Date.now();
+    pos.exitPrice = exitPrice;
+    pos.closeReason = 'MANUAL';
+
+    if (pos.side === 'BUY') {
+      pos.profit = Math.round((exitPrice - pos.entryPrice) * pos.units * 100) / 100;
+      pos.profitPips = Math.round(((exitPrice - pos.entryPrice) / spec.pipSize) * 10) / 10;
+    } else {
+      pos.profit = Math.round((pos.entryPrice - exitPrice) * pos.units * 100) / 100;
+      pos.profitPips = Math.round(((pos.entryPrice - exitPrice) / spec.pipSize) * 10) / 10;
+    }
+
+    store.account.balance = Math.round((store.account.balance + pos.profit) * 100) / 100;
+    store.account.realizedPnL = Math.round((store.account.realizedPnL + pos.profit) * 100) / 100;
+    store.history.unshift(pos);
+    closed.push(pos);
+  }
+
+  const closedIds = new Set(closed.map((c) => c.id));
+  store.positions = store.positions.filter((p) => !closedIds.has(p.id));
+
+  recalculatePortfolio(userId);
+  saveStore(store, userId);
+  return closed;
 }

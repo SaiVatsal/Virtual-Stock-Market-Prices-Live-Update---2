@@ -6,19 +6,23 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { orderId } = body;
 
+    const cookieUserId = req.cookies.get('nexus_user_id')?.value;
+    const headerUserId = req.headers.get('x-user-id');
+    const userId = body.userId || cookieUserId || headerUserId || 'admin';
+
     if (!orderId) {
       return NextResponse.json({ error: 'Missing orderId' }, { status: 400 });
     }
 
-    const cancelled = cancelOrder(orderId);
+    const cancelled = cancelOrder(orderId, userId);
 
     return NextResponse.json({
       success: true,
       order: cancelled,
-      positions: getPositions(),
-      account: getAccountState(),
+      positions: getPositions(userId),
+      account: getAccountState(userId),
       quotes: getLatestQuotes(),
-      history: getTradeHistory(),
+      history: getTradeHistory(userId),
       message: `Order ${orderId} cancelled successfully`
     });
   } catch (err: any) {
